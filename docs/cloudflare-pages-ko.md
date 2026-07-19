@@ -1,4 +1,7 @@
-## Cloudflare 페이지 배포 가이드
+> **폐기됨**: 이 가이드는 Cloudflare가 더 이상 권장하지 않는 `@cloudflare/next-on-pages`를
+> 사용합니다. 대신 [Cloudflare Workers 가이드](./cloudflare-workers-ko.md)를 사용하세요.
+
+## Cloudflare 페이지 배포 가이드 (레거시)
 
 ## 새 프로젝트를 만드는 방법
 이 프로젝트를 Github에서 포크한 다음 dash.cloudflare.com에 로그인하고 페이지로 이동합니다.

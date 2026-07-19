@@ -1,4 +1,7 @@
-# Guía de implementación de Cloudflare Pages
+> **Obsoleto**: esta guía usa `@cloudflare/next-on-pages`, que Cloudflare ya no recomienda. Usa
+> en su lugar la [guía de Cloudflare Workers](./cloudflare-workers-es.md).
+
+# Guía de implementación de Cloudflare Pages (obsoleta)
 
 ## Cómo crear un nuevo proyecto
 

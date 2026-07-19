@@ -20,14 +20,14 @@ This repo already contains everything needed to build a Worker:
 - `yarn cf:build` / `yarn cf:preview` / `yarn cf:deploy` — package.json scripts that wrap the
   OpenNext + Wrangler CLIs, for local builds/testing if you ever want them.
 
-You asked to do the **first deployment by hand from the Cloudflare dashboard**, so everything
+This guide covers the **first deployment by hand from the Cloudflare dashboard**, so everything
 below is portal clicks, not CLI commands — Cloudflare will run the build/deploy commands for you
 on every push once it's connected to your fork.
 
 ## 1. Prerequisites
 
 - A Cloudflare account (the Free plan is enough).
-- Your fork of this repo pushed to GitHub (you said this is already done).
+- Your fork of this repo pushed to GitHub.
 - At least one model provider API key (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, ...).
 
 ## 2. Create the Worker from the dashboard

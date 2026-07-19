@@ -1,4 +1,8 @@
-# Cloudflare Pages 導入ガイド
+> **非推奨**: このガイドは `@cloudflare/next-on-pages` を使用していますが、Cloudflare は
+> もはやこの方法を推奨していません。代わりに [Cloudflare Workers ガイド](./cloudflare-workers-ja.md)
+> を使用してください。
+
+# Cloudflare Pages 導入ガイド(旧版)
 
 ## 新規プロジェクトの作成方法
 GitHub でこのプロジェクトをフォークし、dash.cloudflare.com にログインして Pages にアクセスします。
