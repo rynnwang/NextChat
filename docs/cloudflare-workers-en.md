@@ -53,22 +53,32 @@ on every push once it's connected to your fork.
 
 1. Log in at [dash.cloudflare.com](https://dash.cloudflare.com).
 2. Create the three storage resources this fork needs, before your first deploy — all under
-   **Storage & Databases** in the left sidebar. **In your fork**, each step below tells you which
-   placeholder in [`wrangler.jsonc`](../wrangler.jsonc) to replace with the real ID/name Cloudflare
-   gives you; commit and push those edits before continuing (the Worker build reads bindings from
-   this file, not from anything you configure in the dashboard).
-   1. **KV** (site login) → **Create namespace**, name it something like `nextchat-auth`. Replace
-      `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` with the namespace ID it gives you.
-   2. **D1 SQL Database** (chat-history sync metadata) → **Create database**, name it
-      `nextchat-db` (must match `database_name` in `wrangler.jsonc`, already set for you). Replace
-      `REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID` with the database ID it gives you. Then, still in
-      the dashboard, open that database's **Console** tab and run the contents of
-      [`migrations/0001_create_sync_state.sql`](../migrations/0001_create_sync_state.sql) — this
-      creates the one small table sync metadata lives in (no CLI needed).
-   3. **R2 Object Storage** (chat-history sync blob) → **Create bucket**. Bucket names must be
-      lowercase with hyphens only (no underscores/uppercase) — Cloudflare enforces this and the
-      Worker build will refuse to start otherwise. Replace `replace-with-your-r2-bucket-name` in
-      `wrangler.jsonc` with the name you chose.
+   **Storage & Databases** in the left sidebar. Use these exact names (don't improvise your own —
+   D1's name and R2's name are hardcoded in `wrangler.jsonc`, and using anything else just adds a
+   step for no benefit):
+
+   | Resource | Product/action | Create it named exactly | Binding name (fixed, don't change) | Do you need to edit `wrangler.jsonc`? |
+   | --- | --- | --- | --- | --- |
+   | Site login | KV → **Create namespace** | `nextchat-auth` | `AUTH_KV` | **Yes** — paste the Namespace ID it gives you over `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` |
+   | Chat-history sync metadata | D1 SQL Database → **Create database** | `nextchat-db` | `CHAT_DB` | **Yes** — paste the Database ID it gives you over `REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID` |
+   | Chat-history sync blob | R2 Object Storage → **Create bucket** | `nextchat-chat-files` | `CHAT_FILES` | **No** — this exact name is already set in `wrangler.jsonc` |
+
+   KV and D1 hand you an opaque ID after creation that has to go into `wrangler.jsonc` — there's no
+   way around that, the config file has no plain "name" field for either, only that ID. R2 is
+   different: a bucket's name *is* its identifier, so as long as you create it with the name above,
+   there's nothing left to edit for it.
+
+   For the two rows that do need an edit: after creating that resource and copying its ID, edit
+   `wrangler.jsonc` **in your fork** and replace the matching `REPLACE_WITH_...` placeholder with
+   the real ID, then commit and push before continuing — the Worker build reads bindings from this
+   file, not from anything you click in the dashboard. **This step is the one people skip and then
+   hit a deploy error for** (see the first troubleshooting entry below) — don't move on until both
+   placeholders are gone from your pushed `wrangler.jsonc`.
+
+   Finally, for D1 specifically: after creating `nextchat-db`, open its **Console** tab in the
+   dashboard (still no CLI needed) and run the contents of
+   [`migrations/0001_create_sync_state.sql`](../migrations/0001_create_sync_state.sql) — this
+   creates the one small table sync metadata lives in.
 3. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
    "Workers & Pages → Pages").
 4. Click **Create** → **Import a Git repository**.
@@ -163,21 +173,26 @@ production dry run you can get without deploying. Local KV/D1/R2 state is emulat
 
 ## 6. Troubleshooting
 
+- **Deploy fails with `KV namespace 'REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID' is not valid`** (or
+  the equivalent for `CHAT_DB`'s `database_id`) — this is the single most common mistake: the
+  placeholder in `wrangler.jsonc` was never replaced with a real ID, in the pushed commit that
+  actually got deployed. Check the "Bindings" list partway through the build log — it prints the
+  literal value each binding resolved to. If it still shows `REPLACE_WITH_...`, go back to step 2,
+  copy the real Namespace/Database ID from the resource's page in the dashboard, paste it over the
+  placeholder in your fork's `wrangler.jsonc`, and make sure you actually commit *and push* that
+  change (a local edit that was never pushed deploys the same as no edit at all).
 - **The setup/login page errors out, or `/api/session` returns an error instead of
-  `{configured, authenticated}`** — the `AUTH_KV` binding in `wrangler.jsonc` still has the
-  `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` placeholder. Create the namespace and put its real ID
-  there (see step 2 above), then redeploy.
-- **Build/deploy fails with something like `r2_buckets[0].bucket_name="..." is invalid`** — R2
-  bucket names are validated at build time and must be lowercase letters/numbers/hyphens only (no
-  underscores or uppercase), 3-63 characters. Unlike the KV namespace ID or D1 database ID (both
-  opaque strings wrangler doesn't format-check), the R2 `bucket_name` *is* the literal name, so it
-  has to satisfy this format. Fix the `bucket_name` in `wrangler.jsonc` and redeploy.
+  `{configured, authenticated}`** — same root cause as above, specifically for `AUTH_KV`.
+- **Build/deploy fails with something like `r2_buckets[0].bucket_name="..." is invalid`** — you
+  changed `bucket_name` away from the default `nextchat-chat-files` to something that doesn't
+  satisfy R2's naming rules (lowercase letters/numbers/hyphens only, no underscores/uppercase,
+  3-63 characters). Either rename your bucket to exactly `nextchat-chat-files` (simplest — matches
+  the pre-set default, no edit needed) or fix `bucket_name` in `wrangler.jsonc` to match whatever
+  valid name you actually created it with.
 - **Settings → "Sync" shows an error, or `/api/sync/meta` / `/api/sync/blob` return a 500 with a
-  "binding not found" message** — the `CHAT_DB` (D1) or `CHAT_FILES` (R2) binding in
-  `wrangler.jsonc` still has its `REPLACE_WITH_...` placeholder, or you created the D1 database but
-  never ran the migration (the `sync_state` table doesn't exist yet). See step 2 above — the
-  migration is one SQL statement you can paste into the D1 database's **Console** tab in the
-  dashboard, no CLI required.
+  "binding not found" message** — same root cause as the first entry, for `CHAT_DB`/`CHAT_FILES`,
+  or you created the D1 database but never ran the migration (the `sync_state` table doesn't exist
+  yet — see step 2 above, it's one SQL statement pasted into the D1 database's **Console** tab).
 - **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
   command?`, right after a build that otherwise looked successful** — the **Build command** is
   set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under
