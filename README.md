@@ -260,14 +260,6 @@ Change default model
 
 Add additional models to have vision capabilities, beyond the default pattern matching. Multiple models should be separated by commas.
 
-### `WHITE_WEBDAV_ENDPOINTS` (optional)
-
-You can use this option if you want to increase the number of webdav service addresses you are allowed to access, as required by the format：
-
-- Each address must be a complete endpoint
-  > `https://xxxx/yyy`
-- Multiple addresses are connected by ', '
-
 ### `DEFAULT_INPUT_TEMPLATE` (optional)
 
 Customize the default template used to initialize the User Input Preprocessing configuration item in Settings.
@@ -356,7 +348,7 @@ bash <(curl -s https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/main/s
 
 > Please go to the [docs][./docs] directory for more documentation instructions.
 
-- [Deploy on Cloudflare Workers](./docs/cloudflare-workers-en.md) ([legacy Cloudflare Pages guide](./docs/cloudflare-pages-en.md))
+- [Deploy on Cloudflare Workers](./docs/cloudflare-workers-en.md)
 - [Frequent Ask Questions](./docs/faq-en.md)
 - [How to add a new translation](./docs/translation.md)
 - [How to use Vercel (No English)](./docs/vercel-cn.md)

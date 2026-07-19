@@ -10,5 +10,34 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  // --- Storage bindings - see docs/cloudflare-workers-en.md step 2 for the
+  // exact "create X named Y" steps. Quick reference:
+  //   KV  -> create a namespace named "nextchat-auth",       then paste its
+  //          Namespace ID below (no way around this: KV has no name field
+  //          in this config, only an opaque ID Cloudflare generates).
+  //   D1  -> create a database named exactly "nextchat-db",  then paste its
+  //          Database ID below (same reason as KV).
+  //   R2  -> create a bucket named exactly "nextchat-chat-files" - nothing
+  //          to paste here, the bucket_name below already matches it.
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KV",
+      "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "nextchat-db",
+      "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CHAT_FILES",
+      "bucket_name": "nextchat-chat-files"
+    }
+  ]
 }

@@ -25,6 +25,7 @@ import {
 import { SideBar } from "./sidebar";
 import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
+import { SiteAuthGate } from "./site-auth-gate";
 import { getClientConfig } from "../config/client";
 import { type ClientApi, getClientApi } from "../client/api";
 import { useAccessStore } from "../store";
@@ -256,9 +257,11 @@ export function Home() {
 
   return (
     <ErrorBoundary>
-      <Router>
-        <Screen />
-      </Router>
+      <SiteAuthGate>
+        <Router>
+          <Screen />
+        </Router>
+      </SiteAuthGate>
     </ErrorBoundary>
   );
 }

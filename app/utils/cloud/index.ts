@@ -1,23 +1,12 @@
-import { createWebDavClient } from "./webdav";
-import { createUpstashClient } from "./upstash";
+import { createD1R2Client } from "./d1r2";
 
 export enum ProviderType {
-  WebDAV = "webdav",
-  UpStash = "upstash",
+  D1R2 = "d1r2",
 }
 
 export const SyncClients = {
-  [ProviderType.UpStash]: createUpstashClient,
-  [ProviderType.WebDAV]: createWebDavClient,
+  [ProviderType.D1R2]: createD1R2Client,
 } as const;
-
-type SyncClientConfig = {
-  [K in keyof typeof SyncClients]: (typeof SyncClients)[K] extends (
-    _: infer C,
-  ) => any
-    ? C
-    : never;
-};
 
 export type SyncClient = {
   get: (key: string) => Promise<string>;
@@ -25,9 +14,6 @@ export type SyncClient = {
   check: () => Promise<boolean>;
 };
 
-export function createSyncClient<T extends ProviderType>(
-  provider: T,
-  config: SyncClientConfig[T],
-): SyncClient {
-  return SyncClients[provider](config as any) as any;
+export function createSyncClient(provider: ProviderType): SyncClient {
+  return SyncClients[provider]() as any;
 }
