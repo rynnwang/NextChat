@@ -67,6 +67,25 @@ on every push once it's connected to your fork.
       lowercase with hyphens only (no underscores/uppercase) — Cloudflare enforces this and the
       Worker build will refuse to start otherwise. Replace `replace-with-your-r2-bucket-name` in
       `wrangler.jsonc` with the name you chose.
+
+   > **Alternative if you'd rather not commit resource IDs to a public fork**: you can instead
+   > leave `wrangler.jsonc`'s `kv_namespaces`/`d1_databases`/`r2_buckets` blocks out entirely and
+   > attach the same three bindings by hand under the Worker's **Settings → Bindings** tab in the
+   > dashboard, using the exact binding names `AUTH_KV`, `CHAT_DB`, `CHAT_FILES`.
+   >
+   > **Known risk**: this repo's whole setup is "every push auto-redeploys" via `wrangler deploy`,
+   > and Wrangler treats `wrangler.jsonc` as the complete desired state for a Worker's bindings —
+   > not a delta to merge with the dashboard. Cloudflare's own guidance is that dashboard-added
+   > bindings on a Wrangler-managed Worker get overwritten the next time `wrangler deploy` runs.
+   > Since that happens on literally every push here, expect manually-attached bindings to
+   > disappear the next time you push anything, reintroducing "binding not found" errors with no
+   > obvious cause. Test this yourself before relying on it: bind manually, push an unrelated
+   > trivial commit, then check under Settings → Bindings whether it's still there. If it doesn't
+   > survive, the two options that reliably keep IDs out of git while still auto-redeploying are
+   > making the fork **private** (simplest — nobody but you can see the repo at all), or injecting
+   > the real IDs into `wrangler.jsonc` from encrypted dashboard "Secret" environment variables as
+   > part of the build step (more moving parts, but keeps the repo public with only placeholders
+   > visible) — happy to wire either of those up if this turns out not to hold.
 3. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
    "Workers & Pages → Pages").
 4. Click **Create** → **Import a Git repository**.
@@ -176,6 +195,13 @@ production dry run you can get without deploying. Local KV/D1/R2 state is emulat
   never ran the migration (the `sync_state` table doesn't exist yet). See step 2 above — the
   migration is one SQL statement you can paste into the D1 database's **Console** tab in the
   dashboard, no CLI required.
+- **The same "binding not found" errors above (or the login/setup page breaking) start happening
+  again after a previously-working deploy, with no config file changes** — if you attached
+  `AUTH_KV`/`CHAT_DB`/`CHAT_FILES` manually via **Settings → Bindings** instead of declaring them
+  in `wrangler.jsonc` (see the alternative note in step 2), this is the expected failure mode: the
+  next `wrangler deploy` — which runs on every push — reset the Worker's bindings to match
+  `wrangler.jsonc`, which doesn't list them, so they were dropped. Either re-attach them after
+  every single deploy, or switch to one of the two more durable approaches noted there.
 - **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
   command?`, right after a build that otherwise looked successful** — the **Build command** is
   set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under
