@@ -11,12 +11,18 @@
   "observability": {
     "enabled": true
   },
+  // --- Storage bindings - see docs/cloudflare-workers-en.md step 2 for the
+  // exact "create X named Y" steps. Quick reference:
+  //   KV  -> create a namespace named "nextchat-auth",       then paste its
+  //          Namespace ID below (no way around this: KV has no name field
+  //          in this config, only an opaque ID Cloudflare generates).
+  //   D1  -> create a database named exactly "nextchat-db",  then paste its
+  //          Database ID below (same reason as KV).
+  //   R2  -> create a bucket named exactly "nextchat-chat-files" - nothing
+  //          to paste here, the bucket_name below already matches it.
   "kv_namespaces": [
     {
       "binding": "AUTH_KV",
-      // Replace with the ID printed by `wrangler kv namespace create AUTH_KV`
-      // (or created via the dashboard: Storage & Databases -> KV). Required
-      // for the single-user login/setup flow - see docs/cloudflare-workers-en.md.
       "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
     }
   ],
@@ -24,10 +30,6 @@
     {
       "binding": "CHAT_DB",
       "database_name": "nextchat-db",
-      // Replace with the ID printed by `wrangler d1 create nextchat-db`
-      // (or created via the dashboard: Storage & Databases -> D1 SQL
-      // Database). Stores sync metadata for the chat-history backup
-      // feature - see docs/cloudflare-workers-en.md.
       "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
       "migrations_dir": "migrations"
     }
@@ -35,12 +37,7 @@
   "r2_buckets": [
     {
       "binding": "CHAT_FILES",
-      // Replace with the bucket name you create via
-      // `wrangler r2 bucket create <name>` (or the dashboard: Storage &
-      // Databases -> R2 Object Storage). Stores the actual chat-history
-      // backup blob - see docs/cloudflare-workers-en.md. Bucket names must
-      // be lowercase alphanumeric with hyphens only (no underscores).
-      "bucket_name": "replace-with-your-r2-bucket-name"
+      "bucket_name": "nextchat-chat-files"
     }
   ]
 }
