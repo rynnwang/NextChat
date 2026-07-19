@@ -39,6 +39,7 @@
     "heic2any": "^0.0.4",
     "html-to-image": "^1.11.11",
     "idb-keyval": "^6.2.1",
+    "jose": "^6.2.3",
     "lodash-es": "^4.17.21",
     "markdown-to-txt": "^2.0.1",
     "mermaid": "^10.6.1",
@@ -63,6 +64,7 @@
     "zustand": "^4.3.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260719.1",
     "@opennextjs/cloudflare": "1.15.1",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/cli": "1.5.11",

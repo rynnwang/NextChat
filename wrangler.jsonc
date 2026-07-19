@@ -10,5 +10,14 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KV",
+      // Replace with the ID printed by `wrangler kv namespace create AUTH_KV`
+      // (or created via the dashboard: Storage & Databases -> KV). Required
+      // for the single-user login/setup flow - see docs/cloudflare-workers-en.md.
+      "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
+    }
+  ]
 }

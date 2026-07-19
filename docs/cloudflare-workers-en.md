@@ -20,6 +20,11 @@ This repo already contains everything needed to build a Worker:
 - `yarn cf:build` / `yarn cf:preview` / `yarn cf:deploy` — package.json scripts that wrap the
   OpenNext + Wrangler CLIs, for local builds/testing if you ever want them.
 
+This deployment is single-user: the first visit shows a one-time setup page to choose a site-wide
+password (stored, PBKDF2-hashed, in a Cloudflare KV namespace), and every visit after that
+requires logging in with it via a signed session cookie. You need to create that KV namespace
+before your first deploy — see the note in step 2 below.
+
 This guide covers the **first deployment by hand from the Cloudflare dashboard**, so everything
 below is portal clicks, not CLI commands — Cloudflare will run the build/deploy commands for you
 on every push once it's connected to your fork.
@@ -43,14 +48,20 @@ on every push once it's connected to your fork.
 > or tab, back out and find the **Workers** entry point instead.
 
 1. Log in at [dash.cloudflare.com](https://dash.cloudflare.com).
-2. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
+2. Create the KV namespace the login/setup flow needs, before your first deploy: go to
+   **Storage & Databases → KV** → **Create namespace**, name it something like `nextchat-auth`,
+   and copy the namespace ID it gives you. Then, in your fork, replace
+   `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` in [`wrangler.jsonc`](../wrangler.jsonc) with that ID
+   and push the change — the Worker build reads the binding from this file, not from anything you
+   configure in the dashboard.
+3. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
    "Workers & Pages → Pages").
-3. Click **Create** → **Import a Git repository**.
-4. Authorize Cloudflare's GitHub app if prompted, then pick your NextChat fork.
-5. **Project/Worker name**: use the default or pick your own — it becomes part of your
+4. Click **Create** → **Import a Git repository**.
+5. Authorize Cloudflare's GitHub app if prompted, then pick your NextChat fork.
+6. **Project/Worker name**: use the default or pick your own — it becomes part of your
    `<name>.<subdomain>.workers.dev` URL. If you change it, also update `name` in
    [`wrangler.jsonc`](../wrangler.jsonc) to match (or just leave the default `nextchat`).
-6. **Build settings**:
+7. **Build settings**:
    - **Build command**: set this to `yarn cf:build` (or `npm run cf:build`) — **do not leave this
      as `yarn run build`/`next build`**. Cloudflare's Next.js framework preset auto-fills the
      plain `build` script, which only runs `next build` and never invokes the OpenNext transform,
@@ -69,13 +80,15 @@ on every push once it's connected to your fork.
      current build images should read automatically. In particular, don't reuse
      `NODE_VERSION=20.1` from the old, deprecated Pages guide — that exact version is EOL and is
      too old for this project's current tooling (`yargs` alone requires Node ^20.19/^22.12/>=23).
-7. **Environment variables**: click **Add variable** for each one you need (see the table below).
+8. **Environment variables**: click **Add variable** for each one you need (see the table below).
    Mark API keys as **Secret**, not plain text. At minimum add your provider key, e.g.
    `OPENAI_API_KEY`.
-8. Click **Save and Deploy**. The first build takes a couple of minutes; Cloudflare streams the
+9. Click **Save and Deploy**. The first build takes a couple of minutes; Cloudflare streams the
    build log on screen.
-9. Once it's live, open the `*.workers.dev` URL Cloudflare gives you and confirm the chat UI
-   loads and a message actually round-trips to your model provider.
+10. Once it's live, open the `*.workers.dev` URL Cloudflare gives you. You should land on a
+    one-time setup page — choose a password there (write it down, it can't be recovered or reset
+    without manually clearing the KV namespace), then confirm you can log back in and that a chat
+    message round-trips to your model provider.
 
 From now on, every push to your production branch triggers a new build+deploy automatically —
 that part is no longer a manual step.
@@ -129,6 +142,10 @@ production dry run you can get without deploying.
 
 ## 6. Troubleshooting
 
+- **The setup/login page errors out, or `/api/session` returns an error instead of
+  `{configured, authenticated}`** — the `AUTH_KV` binding in `wrangler.jsonc` still has the
+  `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` placeholder. Create the namespace and put its real ID
+  there (see step 2 above), then redeploy.
 - **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
   command?`, right after a build that otherwise looked successful** — the **Build command** is
   set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under
