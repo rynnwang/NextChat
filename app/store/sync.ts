@@ -1,5 +1,5 @@
 import { getClientConfig } from "../config/client";
-import { ApiPath, STORAGE_KEY, StoreKey } from "../constant";
+import { StoreKey } from "../constant";
 import { createPersistStore } from "../utils/store";
 import {
   AppState,
@@ -13,46 +13,26 @@ import { showToast } from "../components/ui-lib";
 import Locale from "../locales";
 import { createSyncClient, ProviderType } from "../utils/cloud";
 
-export interface WebDavConfig {
-  server: string;
-  username: string;
-  password: string;
-}
-
 const isApp = !!getClientConfig()?.isApp;
 export type SyncStore = GetStoreState<typeof useSyncStore>;
 
 const DEFAULT_SYNC_STATE = {
-  provider: ProviderType.WebDAV,
-  useProxy: true,
-  proxyUrl: ApiPath.Cors as string,
-
-  webdav: {
-    endpoint: "",
-    username: "",
-    password: "",
-  },
-
-  upstash: {
-    endpoint: "",
-    username: STORAGE_KEY,
-    apiKey: "",
-  },
-
   lastSyncTime: 0,
-  lastProvider: "",
 };
 
 export const useSyncStore = createPersistStore(
   DEFAULT_SYNC_STATE,
   (set, get) => ({
+    // Chat-history backup always targets this deployment's own Cloudflare
+    // D1 + R2 bindings - there's nothing for a single-user deployment to
+    // configure, so this is only false when the app isn't running as a
+    // Cloudflare Worker at all (e.g. the exported desktop/static build).
     cloudSync() {
-      const config = get()[get().provider];
-      return Object.values(config).every((c) => c.toString().length > 0);
+      return !isApp;
     },
 
     markSyncTime() {
-      set({ lastSyncTime: Date.now(), lastProvider: get().provider });
+      set({ lastSyncTime: Date.now() });
     },
 
     export() {
@@ -83,29 +63,23 @@ export const useSyncStore = createPersistStore(
     },
 
     getClient() {
-      const provider = get().provider;
-      const client = createSyncClient(provider, get());
-      return client;
+      return createSyncClient(ProviderType.D1R2);
     },
 
     async sync() {
       const localState = getLocalAppState();
-      const provider = get().provider;
-      const config = get()[provider];
       const client = this.getClient();
 
       try {
-        const remoteState = await client.get(config.username);
-        if (!remoteState || remoteState === "") {
-          await client.set(config.username, JSON.stringify(localState));
+        const remoteRaw = await client.get("app-state");
+        if (!remoteRaw || remoteRaw === "") {
+          await client.set("app-state", JSON.stringify(localState));
           console.log(
             "[Sync] Remote state is empty, using local state instead.",
           );
           return;
         } else {
-          const parsedRemoteState = JSON.parse(
-            await client.get(config.username),
-          ) as AppState;
+          const parsedRemoteState = JSON.parse(remoteRaw) as AppState;
           mergeAppState(localState, parsedRemoteState);
           setLocalAppState(localState);
         }
@@ -114,7 +88,7 @@ export const useSyncStore = createPersistStore(
         throw e;
       }
 
-      await client.set(config.username, JSON.stringify(localState));
+      await client.set("app-state", JSON.stringify(localState));
 
       this.markSyncTime();
     },
@@ -126,25 +100,13 @@ export const useSyncStore = createPersistStore(
   }),
   {
     name: StoreKey.Sync,
-    version: 1.2,
+    version: 2,
 
     migrate(persistedState, version) {
-      const newState = persistedState as typeof DEFAULT_SYNC_STATE;
-
-      if (version < 1.1) {
-        newState.upstash.username = STORAGE_KEY;
-      }
-
-      if (version < 1.2) {
-        if (
-          (persistedState as typeof DEFAULT_SYNC_STATE).proxyUrl ===
-          "/api/cors/"
-        ) {
-          newState.proxyUrl = "";
-        }
-      }
-
-      return newState as any;
+      // v1.x persisted webdav/upstash provider config that no longer exists;
+      // only lastSyncTime carries forward.
+      const old = persistedState as { lastSyncTime?: number };
+      return { lastSyncTime: old.lastSyncTime ?? 0 } as any;
     },
   },
 );

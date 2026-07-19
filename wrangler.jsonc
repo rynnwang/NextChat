@@ -19,5 +19,27 @@
       // for the single-user login/setup flow - see docs/cloudflare-workers-en.md.
       "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
     }
+  ],
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "nextchat-db",
+      // Replace with the ID printed by `wrangler d1 create nextchat-db`
+      // (or created via the dashboard: Storage & Databases -> D1 SQL
+      // Database). Stores sync metadata for the chat-history backup
+      // feature - see docs/cloudflare-workers-en.md.
+      "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CHAT_FILES",
+      // Replace with the bucket name you create via
+      // `wrangler r2 bucket create <name>` (or the dashboard: Storage &
+      // Databases -> R2 Object Storage). Stores the actual chat-history
+      // backup blob - see docs/cloudflare-workers-en.md.
+      "bucket_name": "REPLACE_WITH_YOUR_R2_BUCKET_NAME"
+    }
   ]
 }
