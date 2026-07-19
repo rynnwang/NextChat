@@ -1,7 +1,9 @@
 # Deploying to Cloudflare Workers (free tier)
 
-> This replaces the older [Cloudflare Pages guide](./cloudflare-pages-en.md), which relied on
-> `@cloudflare/next-on-pages`. Cloudflare now recommends deploying Next.js apps as a **Worker**
+> This repo previously had a Cloudflare Pages deployment guide, built on
+> `@cloudflare/next-on-pages`. It's been removed: Cloudflare Pages cannot deploy this repo at all
+> anymore (its build pipeline doesn't understand the `wrangler.jsonc` Worker+assets setup below —
+> see the callout in step 2). Cloudflare now recommends deploying Next.js apps as a **Worker**
 > (with static assets) built by the [OpenNext Cloudflare adapter](https://opennext.js.org/cloudflare)
 > instead — it supports the regular Node.js runtime (this app's API routes use it by default),
 > so nothing has to be rewritten for the "Edge" runtime the old approach required.
