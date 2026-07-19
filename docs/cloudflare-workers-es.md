@@ -58,8 +58,14 @@ build/deploy por ti en cada push, una vez conectado a tu fork.
    tu URL `<name>.<subdomain>.workers.dev`. Si lo cambias, actualiza también `name` en
    [`wrangler.jsonc`](../wrangler.jsonc) (o simplemente deja el valor por defecto `nextchat`).
 6. **Build settings**:
-   - **Build command**: `npm run cf:build` (o `yarn cf:build` si mantienes Yarn como gestor de
-     paquetes — ambos funcionan porque este repo incluye un `yarn.lock`).
+   - **Build command**: ponlo en `yarn cf:build` (o `npm run cf:build`) — **no lo dejes como
+     `yarn run build`/`next build`**. El preset de framework Next.js de Cloudflare autocompleta
+     el script `build` normal, que solo ejecuta `next build` y nunca invoca la transformación de
+     OpenNext, así que `.open-next/` nunca se genera. `wrangler deploy` falla entonces en el
+     último paso con `ERROR Could not find compiled Open Next config, did you run the build
+     command?`, aunque el build de Next.js en sí haya funcionado. Si ya creaste el Worker con el
+     comando autocompletado, abre **Build → Build configuration** (icono de lápiz) y cámbialo
+     ahí, luego reintenta el despliegue — no hace falta recrear todo el proyecto.
    - Deja el **Deploy command** en su valor por defecto (`npx wrangler deploy`) — Cloudflare lo
      detecta automáticamente desde `wrangler.jsonc`.
    - **No** necesitas configurar los compatibility flags manualmente en el panel como exigía la
@@ -132,6 +138,11 @@ a un ensayo de producción que puedes tener sin desplegar de verdad.
 
 ## 6. Solución de problemas
 
+- **El deploy falla con `ERROR Could not find compiled Open Next config, did you run the build
+  command?` justo después de un build que parecía haber terminado bien** — el **Build command**
+  está puesto como el `yarn run build`/`next build` normal en lugar de `yarn cf:build`.
+  Corrígelo en **Build → Build configuration** en la configuración del Worker y reintenta el
+  despliegue; ver la nota en la sección 2 de arriba.
 - **El log de build dice `Found wrangler.json file... did you mean to use wrangler.toml to
   configure Pages?`** — conectaste este repo como un proyecto **Pages** en lugar de un
   **Worker**. Borra ese proyecto y repite la sección 2 usando **Compute (Workers) → Create →

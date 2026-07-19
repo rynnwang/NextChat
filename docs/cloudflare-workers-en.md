@@ -51,8 +51,14 @@ on every push once it's connected to your fork.
    `<name>.<subdomain>.workers.dev` URL. If you change it, also update `name` in
    [`wrangler.jsonc`](../wrangler.jsonc) to match (or just leave the default `nextchat`).
 6. **Build settings**:
-   - **Build command**: `npm run cf:build` (or `yarn cf:build` if you keep Yarn as the package
-     manager — either works since this repo ships a `yarn.lock`).
+   - **Build command**: set this to `yarn cf:build` (or `npm run cf:build`) — **do not leave this
+     as `yarn run build`/`next build`**. Cloudflare's Next.js framework preset auto-fills the
+     plain `build` script, which only runs `next build` and never invokes the OpenNext transform,
+     so `.open-next/` is never produced. `wrangler deploy` then fails at the very last step with
+     `ERROR Could not find compiled Open Next config, did you run the build command?` even though
+     the Next.js build itself succeeded. If you already created the Worker with the auto-filled
+     command, open **Build → Build configuration** (pencil icon) and change it there, then retry
+     the deployment — no need to recreate the whole project.
    - Leave **Deploy command** as the default (`npx wrangler deploy`) — Cloudflare detects it from
      `wrangler.jsonc` automatically.
    - You do **not** need to set compatibility flags manually in the dashboard the way the old
@@ -123,6 +129,11 @@ production dry run you can get without deploying.
 
 ## 6. Troubleshooting
 
+- **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
+  command?`, right after a build that otherwise looked successful** — the **Build command** is
+  set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under
+  **Build → Build configuration** in the Worker's settings and retry the deployment; see the note
+  in section 2 above.
 - **Build log says `Found wrangler.json file... did you mean to use wrangler.toml to configure
   Pages?`** — you connected this repo as a **Pages** project instead of a **Worker**. Delete that
   project and redo section 2 via **Compute (Workers) → Create → Import a Git repository**; Pages
