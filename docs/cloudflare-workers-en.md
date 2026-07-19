@@ -22,8 +22,10 @@ This repo already contains everything needed to build a Worker:
 
 This deployment is single-user: the first visit shows a one-time setup page to choose a site-wide
 password (stored, PBKDF2-hashed, in a Cloudflare KV namespace), and every visit after that
-requires logging in with it via a signed session cookie. You need to create that KV namespace
-before your first deploy — see the note in step 2 below.
+requires logging in with it via a signed session cookie. Chat-history backup/sync (Settings →
+"Sync") is backed by this same deployment's own Cloudflare D1 (sync metadata) and R2 (the actual
+backup blob) — there's nothing to configure client-side, but you do need to create all three
+resources (KV, D1, R2) before your first deploy — see step 2 below.
 
 This guide covers the **first deployment by hand from the Cloudflare dashboard**, so everything
 below is portal clicks, not CLI commands — Cloudflare will run the build/deploy commands for you
@@ -48,12 +50,23 @@ on every push once it's connected to your fork.
 > or tab, back out and find the **Workers** entry point instead.
 
 1. Log in at [dash.cloudflare.com](https://dash.cloudflare.com).
-2. Create the KV namespace the login/setup flow needs, before your first deploy: go to
-   **Storage & Databases → KV** → **Create namespace**, name it something like `nextchat-auth`,
-   and copy the namespace ID it gives you. Then, in your fork, replace
-   `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` in [`wrangler.jsonc`](../wrangler.jsonc) with that ID
-   and push the change — the Worker build reads the binding from this file, not from anything you
-   configure in the dashboard.
+2. Create the three storage resources this fork needs, before your first deploy — all under
+   **Storage & Databases** in the left sidebar. **In your fork**, each step below tells you which
+   placeholder in [`wrangler.jsonc`](../wrangler.jsonc) to replace with the real ID/name Cloudflare
+   gives you; commit and push those edits before continuing (the Worker build reads bindings from
+   this file, not from anything you configure in the dashboard).
+   1. **KV** (site login) → **Create namespace**, name it something like `nextchat-auth`. Replace
+      `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` with the namespace ID it gives you.
+   2. **D1 SQL Database** (chat-history sync metadata) → **Create database**, name it
+      `nextchat-db` (must match `database_name` in `wrangler.jsonc`, already set for you). Replace
+      `REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID` with the database ID it gives you. Then, still in
+      the dashboard, open that database's **Console** tab and run the contents of
+      [`migrations/0001_create_sync_state.sql`](../migrations/0001_create_sync_state.sql) — this
+      creates the one small table sync metadata lives in (no CLI needed).
+   3. **R2 Object Storage** (chat-history sync blob) → **Create bucket**. Bucket names must be
+      lowercase with hyphens only (no underscores/uppercase) — Cloudflare enforces this and the
+      Worker build will refuse to start otherwise. Replace `replace-with-your-r2-bucket-name` in
+      `wrangler.jsonc` with the name you chose.
 3. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
    "Workers & Pages → Pages").
 4. Click **Create** → **Import a Git repository**.
@@ -87,8 +100,9 @@ on every push once it's connected to your fork.
    build log on screen.
 10. Once it's live, open the `*.workers.dev` URL Cloudflare gives you. You should land on a
     one-time setup page — choose a password there (write it down, it can't be recovered or reset
-    without manually clearing the KV namespace), then confirm you can log back in and that a chat
-    message round-trips to your model provider.
+    without manually clearing the KV namespace), then confirm you can log back in, that a chat
+    message round-trips to your model provider, and that Settings → "Sync" shows a working "Sync"
+    button (confirms the D1/R2 bindings are wired up correctly).
 
 From now on, every push to your production branch triggers a new build+deploy automatically —
 that part is no longer a manual step.
@@ -100,13 +114,12 @@ full list. The common ones:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | one of the provider keys is required | OpenAI access |
-| `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` / `DEEPSEEK_API_KEY` / ... | no | Enable other providers |
+| `OPENAI_API_KEY` | one of the provider keys is required | Access to the MaaS gateway's OpenAI-compatible endpoint |
+| `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | no | Enable the Anthropic/Gemini-compatible endpoints |
 | `CODE` | no | Comma-separated access password(s) for the deployed instance |
-| `BASE_URL` | no | Override the upstream OpenAI-compatible base URL |
+| `BASE_URL` / `ANTHROPIC_URL` / `GOOGLE_URL` | no | Override the default MaaS gateway URL per provider (see `app/constant.ts`) |
 | `HIDE_USER_API_KEY` | no | Set `1` to stop visitors entering their own key |
 | `ENABLE_MCP` | no | Set `true` to enable MCP tool-calling |
-| `WHITE_WEBDAV_ENDPOINTS` | no | Allow-list of WebDAV hosts for chat-log sync |
 
 If you want the "share as link" (Artifacts) feature, also set `CLOUDFLARE_ACCOUNT_ID`,
 `CLOUDFLARE_KV_NAMESPACE_ID` and `CLOUDFLARE_KV_API_KEY` — this app talks to Cloudflare's KV REST
@@ -124,6 +137,10 @@ under **My Profile → API Tokens**.
   bytes from the upstream LLM API back to the browser doesn't count against it.
 - **Static assets**: served directly from Cloudflare's edge network via the `assets` binding in
   `wrangler.jsonc`, at no extra cost.
+- **D1**: 5 GB storage and 5 million rows read/day on the Free plan — this app only ever stores
+  one metadata row, so you will not come close to either limit.
+- **R2**: 10 GB storage and no egress fees on the Free plan (unlike KV/D1, R2 has no free daily
+  request cap worth worrying about for a single-user chat-history backup blob).
 - If you outgrow the free plan, the Workers Paid plan removes the daily request cap and is billed
   per-request/CPU-ms rather than a flat "Pages Functions" style tier.
 
@@ -133,12 +150,14 @@ You don't need this for the dashboard-driven flow above, but if you want to test
 build locally before pushing:
 
 ```bash
-yarn cf:build     # yarn mask, then next build + OpenNext transform into .open-next/
-yarn cf:preview   # builds, then runs the Worker locally via Wrangler
+yarn cf:d1:migrate:local  # applies migrations/*.sql to a local emulated D1 database (one-time)
+yarn cf:build              # yarn mask, then next build + OpenNext transform into .open-next/
+yarn cf:preview             # builds, then runs the Worker locally via Wrangler
 ```
 
 `yarn cf:preview` runs the actual Worker bundle (not `next dev`), so it's the closest thing to a
-production dry run you can get without deploying.
+production dry run you can get without deploying. Local KV/D1/R2 state is emulated on disk under
+`.wrangler/` and persists across runs.
 
 ## 6. Troubleshooting
 
@@ -146,6 +165,17 @@ production dry run you can get without deploying.
   `{configured, authenticated}`** — the `AUTH_KV` binding in `wrangler.jsonc` still has the
   `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` placeholder. Create the namespace and put its real ID
   there (see step 2 above), then redeploy.
+- **Build/deploy fails with something like `r2_buckets[0].bucket_name="..." is invalid`** — R2
+  bucket names are validated at build time and must be lowercase letters/numbers/hyphens only (no
+  underscores or uppercase), 3-63 characters. Unlike the KV namespace ID or D1 database ID (both
+  opaque strings wrangler doesn't format-check), the R2 `bucket_name` *is* the literal name, so it
+  has to satisfy this format. Fix the `bucket_name` in `wrangler.jsonc` and redeploy.
+- **Settings → "Sync" shows an error, or `/api/sync/meta` / `/api/sync/blob` return a 500 with a
+  "binding not found" message** — the `CHAT_DB` (D1) or `CHAT_FILES` (R2) binding in
+  `wrangler.jsonc` still has its `REPLACE_WITH_...` placeholder, or you created the D1 database but
+  never ran the migration (the `sync_state` table doesn't exist yet). See step 2 above — the
+  migration is one SQL statement you can paste into the D1 database's **Console** tab in the
+  dashboard, no CLI required.
 - **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
   command?`, right after a build that otherwise looked successful** — the **Build command** is
   set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under

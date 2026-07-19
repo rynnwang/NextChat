@@ -38,8 +38,9 @@
       // Replace with the bucket name you create via
       // `wrangler r2 bucket create <name>` (or the dashboard: Storage &
       // Databases -> R2 Object Storage). Stores the actual chat-history
-      // backup blob - see docs/cloudflare-workers-en.md.
-      "bucket_name": "REPLACE_WITH_YOUR_R2_BUCKET_NAME"
+      // backup blob - see docs/cloudflare-workers-en.md. Bucket names must
+      // be lowercase alphanumeric with hyphens only (no underscores).
+      "bucket_name": "replace-with-your-r2-bucket-name"
     }
   ]
 }

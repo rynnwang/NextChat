@@ -13,12 +13,6 @@ import FireIcon from "../icons/fire.svg";
 import EyeIcon from "../icons/eye.svg";
 import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
-import ConfigIcon from "../icons/config.svg";
-import ConfirmIcon from "../icons/confirm.svg";
-
-import ConnectionIcon from "../icons/connection.svg";
-import CloudSuccessIcon from "../icons/cloud-success.svg";
-import CloudFailIcon from "../icons/cloud-fail.svg";
 import { trackSettingsPageGuideToCPaymentClick } from "../utils/auth-settings-events";
 import {
   Input,
@@ -58,7 +52,6 @@ import {
   OPENAI_BASE_URL,
   Path,
   RELEASE_URL,
-  STORAGE_KEY,
   ServiceProvider,
   SlotID,
   UPDATE_URL,
@@ -73,7 +66,6 @@ import { getClientConfig } from "../config/client";
 import { useSyncStore } from "../store/sync";
 import { nanoid } from "nanoid";
 import { useMaskStore } from "../store/mask";
-import { ProviderType } from "../utils/cloud";
 import { TTSConfigList } from "./tts-config";
 import { RealtimeConfigList } from "./realtime-chat/realtime-config";
 
@@ -303,21 +295,23 @@ function SyncItems() {
               : Locale.Settings.Sync.NotSyncYet
           }
         >
-          {couldSync && (
-            <IconButton
-              icon={<ResetIcon />}
-              text={Locale.UI.Sync}
-              onClick={async () => {
-                try {
-                  await syncStore.sync();
-                  showToast(Locale.Settings.Sync.Success);
-                } catch (e) {
-                  showToast(Locale.Settings.Sync.Fail);
-                  console.error("[Sync]", e);
-                }
-              }}
-            />
-          )}
+          <>
+            {couldSync && (
+              <IconButton
+                icon={<ResetIcon />}
+                text={Locale.UI.Sync}
+                onClick={async () => {
+                  try {
+                    await syncStore.sync();
+                    showToast(Locale.Settings.Sync.Success);
+                  } catch (e) {
+                    showToast(Locale.Settings.Sync.Fail);
+                    console.error("[Sync]", e);
+                  }
+                }}
+              />
+            )}
+          </>
         </ListItem>
 
         <ListItem

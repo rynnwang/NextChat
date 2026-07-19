@@ -260,14 +260,6 @@ Change default model
 
 Add additional models to have vision capabilities, beyond the default pattern matching. Multiple models should be separated by commas.
 
-### `WHITE_WEBDAV_ENDPOINTS` (optional)
-
-You can use this option if you want to increase the number of webdav service addresses you are allowed to access, as required by the format：
-
-- Each address must be a complete endpoint
-  > `https://xxxx/yyy`
-- Multiple addresses are connected by ', '
-
 ### `DEFAULT_INPUT_TEMPLATE` (optional)
 
 Customize the default template used to initialize the User Input Preprocessing configuration item in Settings.
