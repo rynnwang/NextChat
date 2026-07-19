@@ -1,4 +1,5 @@
 import webpack from "webpack";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const mode = process.env.BUILD_MODE ?? "standalone";
 console.log("[Next] build mode", mode);
@@ -28,7 +29,9 @@ const nextConfig = {
   },
   output: mode,
   images: {
-    unoptimized: mode === "export",
+    // Cloudflare Workers has no `sharp` binary for the built-in optimizer,
+    // and this app only ever renders one small local icon via next/image.
+    unoptimized: true,
   },
   experimental: {
     forceSwcTransforms: true,
@@ -107,5 +110,10 @@ if (mode !== "export") {
     };
   };
 }
+
+// Wires up `next dev` to read Cloudflare bindings (if any are added to
+// wrangler.jsonc later) from local dev storage. Only takes effect under
+// `next dev`, so it's safe to leave in for other build modes/targets.
+initOpenNextCloudflareForDev();
 
 export default nextConfig;
