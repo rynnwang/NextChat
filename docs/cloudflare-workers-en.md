@@ -20,34 +20,55 @@ This repo already contains everything needed to build a Worker:
 - `yarn cf:build` / `yarn cf:preview` / `yarn cf:deploy` — package.json scripts that wrap the
   OpenNext + Wrangler CLIs, for local builds/testing if you ever want them.
 
-You asked to do the **first deployment by hand from the Cloudflare dashboard**, so everything
+This guide covers the **first deployment by hand from the Cloudflare dashboard**, so everything
 below is portal clicks, not CLI commands — Cloudflare will run the build/deploy commands for you
 on every push once it's connected to your fork.
 
 ## 1. Prerequisites
 
 - A Cloudflare account (the Free plan is enough).
-- Your fork of this repo pushed to GitHub (you said this is already done).
+- Your fork of this repo pushed to GitHub.
 - At least one model provider API key (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, ...).
 
 ## 2. Create the Worker from the dashboard
 
+> **This must be created as a Worker, not a Pages project.** Cloudflare Pages and Cloudflare
+> Workers are two different products with two different build pipelines, even though the
+> dashboard groups them under one "Workers & Pages" section. Pages' build runner only understands
+> the old `pages_build_output_dir`-style config and does not know how to run the
+> `wrangler.jsonc` Worker+assets setup this repo uses — if you connect this repo as a **Pages**
+> project, the build fails immediately with an error like *"Found wrangler.json file... did you
+> mean to use wrangler.toml to configure Pages?"*, followed by dependency install errors from an
+> old, EOL Node version Pages defaults to. If any screen in the flow below has a "Pages" heading
+> or tab, back out and find the **Workers** entry point instead.
+
 1. Log in at [dash.cloudflare.com](https://dash.cloudflare.com).
-2. In the left sidebar go to **Compute (Workers)** → **Workers & Pages**.
-3. Click **Create** → **Import a Git repository** (this is the Workers equivalent of the old
-   Pages "Connect to Git" flow).
+2. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
+   "Workers & Pages → Pages").
+3. Click **Create** → **Import a Git repository**.
 4. Authorize Cloudflare's GitHub app if prompted, then pick your NextChat fork.
 5. **Project/Worker name**: use the default or pick your own — it becomes part of your
    `<name>.<subdomain>.workers.dev` URL. If you change it, also update `name` in
    [`wrangler.jsonc`](../wrangler.jsonc) to match (or just leave the default `nextchat`).
 6. **Build settings**:
-   - **Build command**: `npm run cf:build` (or `yarn cf:build` if you keep Yarn as the package
-     manager — either works since this repo ships a `yarn.lock`).
+   - **Build command**: set this to `yarn cf:build` (or `npm run cf:build`) — **do not leave this
+     as `yarn run build`/`next build`**. Cloudflare's Next.js framework preset auto-fills the
+     plain `build` script, which only runs `next build` and never invokes the OpenNext transform,
+     so `.open-next/` is never produced. `wrangler deploy` then fails at the very last step with
+     `ERROR Could not find compiled Open Next config, did you run the build command?` even though
+     the Next.js build itself succeeded. If you already created the Worker with the auto-filled
+     command, open **Build → Build configuration** (pencil icon) and change it there, then retry
+     the deployment — no need to recreate the whole project.
    - Leave **Deploy command** as the default (`npx wrangler deploy`) — Cloudflare detects it from
      `wrangler.jsonc` automatically.
    - You do **not** need to set compatibility flags manually in the dashboard the way the old
      Pages guide required — `nodejs_compat` and `global_fetch_strictly_public` are already
      declared in `wrangler.jsonc` and travel with every build.
+   - **Do not set a `NODE_VERSION` environment variable** unless the build log shows the wrong
+     version being picked up. This repo pins Node via `.node-version`/`engines` (>=20.19), which
+     current build images should read automatically. In particular, don't reuse
+     `NODE_VERSION=20.1` from the old, deprecated Pages guide — that exact version is EOL and is
+     too old for this project's current tooling (`yargs` alone requires Node ^20.19/^22.12/>=23).
 7. **Environment variables**: click **Add variable** for each one you need (see the table below).
    Mark API keys as **Secret**, not plain text. At minimum add your provider key, e.g.
    `OPENAI_API_KEY`.
@@ -108,9 +129,20 @@ production dry run you can get without deploying.
 
 ## 6. Troubleshooting
 
-- **Build fails resolving `@opennextjs/cloudflare` or `wrangler`** — make sure the dashboard's
-  Node version is 18.17+ (set a `NODE_VERSION` environment variable, e.g. `NODE_VERSION=20`, if
-  the build log shows an older one being used).
+- **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
+  command?`, right after a build that otherwise looked successful** — the **Build command** is
+  set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under
+  **Build → Build configuration** in the Worker's settings and retry the deployment; see the note
+  in section 2 above.
+- **Build log says `Found wrangler.json file... did you mean to use wrangler.toml to configure
+  Pages?`** — you connected this repo as a **Pages** project instead of a **Worker**. Delete that
+  project and redo section 2 via **Compute (Workers) → Create → Import a Git repository**; Pages
+  cannot deploy this repo's Worker+assets setup no matter what config you add.
+- **`error yargs@...: The engine "node" is incompatible with this module"` or similar EBADENGINE
+  errors** — the build image resolved an old Node version (Cloudflare Pages defaults to `20.1.0`
+  if nothing overrides it, which is EOL). Remove any `NODE_VERSION=20.1` variable left over from
+  the old Pages guide; the repo's `.node-version`/`engines` fields should otherwise be enough. If
+  the build system still doesn't pick it up, explicitly set `NODE_VERSION=22`.
 - **A provider request works locally but fails only on Workers** — check the build log for
   `nodejs_compat`-related errors; it's already set in `wrangler.jsonc`, but if you renamed/moved
   that file, Cloudflare won't pick up the flag.

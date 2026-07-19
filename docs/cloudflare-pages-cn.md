@@ -1,4 +1,7 @@
-# Cloudflare Pages 部署指南
+> **已废弃**:本指南使用的是 `@cloudflare/next-on-pages`,Cloudflare 已不再推荐使用该方案。
+> 请改用 [Cloudflare Workers 指南](./cloudflare-workers-cn.md)。
+
+# Cloudflare Pages 部署指南(旧版)
 
 ## 如何新建项目
 

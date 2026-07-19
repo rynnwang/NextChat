@@ -465,7 +465,7 @@ bash <(curl -s https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/main/s
 
 > 더 많은 문서는 [docs](./docs) 디렉토리를 참고하세요.
 
-- [Cloudflare 배포 가이드 (폐기됨)](./docs/cloudflare-pages-ko.md)
+- [Cloudflare Workers 배포 가이드](./docs/cloudflare-workers-ko.md) ([레거시 Cloudflare Pages 가이드](./docs/cloudflare-pages-ko.md))
 - [자주 묻는 질문](./docs/faq-ko.md)
 - [새 번역 추가 방법](./docs/translation.md)
 - [Vercel 사용법 (중문)](./docs/vercel-cn.md)
