@@ -9,34 +9,22 @@ export const FETCH_COMMIT_URL = `https://api.github.com/repos/${OWNER}/${REPO}/c
 export const FETCH_TAG_URL = `https://api.github.com/repos/${OWNER}/${REPO}/tags?per_page=1`;
 export const RUNTIME_CONFIG_DOM = "danger-runtime-config";
 
-export const STABILITY_BASE_URL = "https://api.stability.ai";
+// Default upstream base URLs for the three kept providers. This fork talks to
+// a single MaaS (Model-as-a-Service) gateway by default instead of the
+// official vendor endpoints - override per-deployment via the BASE_URL /
+// ANTHROPIC_URL / GOOGLE_URL server env vars (see .env.template), or from the
+// client Settings panel, if you want to point at the vendor directly or at a
+// different gateway.
+//
+// Note: the MaaS gateway's documented OpenAI endpoint is
+// ".../api/v1" - but OpenaiPath.ChatPath etc. below already contribute the
+// "v1/" segment, so the base URL here intentionally omits it (otherwise
+// requests end up hitting ".../api/v1/v1/chat/completions").
+export const OPENAI_BASE_URL = "https://maas-openapi.wanjiedata.com/api";
+export const ANTHROPIC_BASE_URL =
+  "https://maas-openapi.wanjiedata.com/api/anthropic";
 
-export const OPENAI_BASE_URL = "https://api.openai.com";
-export const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
-
-export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/";
-
-export const BAIDU_BASE_URL = "https://aip.baidubce.com";
-export const BAIDU_OATUH_URL = `${BAIDU_BASE_URL}/oauth/2.0/token`;
-
-export const BYTEDANCE_BASE_URL = "https://ark.cn-beijing.volces.com";
-
-export const ALIBABA_BASE_URL = "https://dashscope.aliyuncs.com/api/";
-
-export const TENCENT_BASE_URL = "https://hunyuan.tencentcloudapi.com";
-
-export const MOONSHOT_BASE_URL = "https://api.moonshot.ai";
-export const IFLYTEK_BASE_URL = "https://spark-api-open.xf-yun.com";
-
-export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
-
-export const XAI_BASE_URL = "https://api.x.ai";
-
-export const CHATGLM_BASE_URL = "https://open.bigmodel.cn";
-
-export const SILICONFLOW_BASE_URL = "https://api.siliconflow.cn";
-
-export const AI302_BASE_URL = "https://api.302.ai";
+export const GEMINI_BASE_URL = "https://maas-openapi.wanjiedata.com/api";
 
 export const CACHE_URL_PREFIX = "/api/cache";
 export const UPLOAD_URL = `${CACHE_URL_PREFIX}/upload`;
@@ -49,8 +37,6 @@ export enum Path {
   Masks = "/masks",
   Plugins = "/plugins",
   Auth = "/auth",
-  Sd = "/sd",
-  SdNew = "/sd-new",
   Artifacts = "/artifacts",
   SearchChat = "/search-chat",
   McpMarket = "/mcp-market",
@@ -58,23 +44,10 @@ export enum Path {
 
 export enum ApiPath {
   Cors = "",
-  Azure = "/api/azure",
   OpenAI = "/api/openai",
   Anthropic = "/api/anthropic",
   Google = "/api/google",
-  Baidu = "/api/baidu",
-  ByteDance = "/api/bytedance",
-  Alibaba = "/api/alibaba",
-  Tencent = "/api/tencent",
-  Moonshot = "/api/moonshot",
-  Iflytek = "/api/iflytek",
-  Stability = "/api/stability",
   Artifacts = "/api/artifacts",
-  XAI = "/api/xai",
-  ChatGLM = "/api/chatglm",
-  DeepSeek = "/api/deepseek",
-  SiliconFlow = "/api/siliconflow",
-  "302.AI" = "/api/302ai",
 }
 
 export enum SlotID {
@@ -96,7 +69,6 @@ export enum StoreKey {
   Prompt = "prompt-store",
   Update = "chat-update",
   Sync = "sync",
-  SdList = "sd-list",
   Mcp = "mcp-store",
 }
 
@@ -119,21 +91,8 @@ export const EXPORT_MESSAGE_CLASS_NAME = "export-markdown";
 
 export enum ServiceProvider {
   OpenAI = "OpenAI",
-  Azure = "Azure",
   Google = "Google",
   Anthropic = "Anthropic",
-  Baidu = "Baidu",
-  ByteDance = "ByteDance",
-  Alibaba = "Alibaba",
-  Tencent = "Tencent",
-  Moonshot = "Moonshot",
-  Stability = "Stability",
-  Iflytek = "Iflytek",
-  XAI = "XAI",
-  ChatGLM = "ChatGLM",
-  DeepSeek = "DeepSeek",
-  SiliconFlow = "SiliconFlow",
-  "302.AI" = "302.AI",
 }
 
 // Google API safety settings, see https://ai.google.dev/gemini-api/docs/safety-settings
@@ -146,27 +105,10 @@ export enum GoogleSafetySettingsThreshold {
 }
 
 export enum ModelProvider {
-  Stability = "Stability",
   GPT = "GPT",
   GeminiPro = "GeminiPro",
   Claude = "Claude",
-  Ernie = "Ernie",
-  Doubao = "Doubao",
-  Qwen = "Qwen",
-  Hunyuan = "Hunyuan",
-  Moonshot = "Moonshot",
-  Iflytek = "Iflytek",
-  XAI = "XAI",
-  ChatGLM = "ChatGLM",
-  DeepSeek = "DeepSeek",
-  SiliconFlow = "SiliconFlow",
-  "302.AI" = "302.AI",
 }
-
-export const Stability = {
-  GeneratePath: "v2beta/stable-image/generate",
-  ExampleEndpoint: "https://api.stability.ai",
-};
 
 export const Anthropic = {
   ChatPath: "v1/messages",
@@ -184,98 +126,10 @@ export const OpenaiPath = {
   ListModelPath: "v1/models",
 };
 
-export const Azure = {
-  ChatPath: (deployName: string, apiVersion: string) =>
-    `deployments/${deployName}/chat/completions?api-version=${apiVersion}`,
-  // https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/generations?api-version=<api_version>
-  ImagePath: (deployName: string, apiVersion: string) =>
-    `deployments/${deployName}/images/generations?api-version=${apiVersion}`,
-  ExampleEndpoint: "https://{resource-url}/openai",
-};
-
 export const Google = {
   ExampleEndpoint: "https://generativelanguage.googleapis.com/",
   ChatPath: (modelName: string) =>
     `v1beta/models/${modelName}:streamGenerateContent`,
-};
-
-export const Baidu = {
-  ExampleEndpoint: BAIDU_BASE_URL,
-  ChatPath: (modelName: string) => {
-    let endpoint = modelName;
-    if (modelName === "ernie-4.0-8k") {
-      endpoint = "completions_pro";
-    }
-    if (modelName === "ernie-4.0-8k-preview-0518") {
-      endpoint = "completions_adv_pro";
-    }
-    if (modelName === "ernie-3.5-8k") {
-      endpoint = "completions";
-    }
-    if (modelName === "ernie-speed-8k") {
-      endpoint = "ernie_speed";
-    }
-    return `rpc/2.0/ai_custom/v1/wenxinworkshop/chat/${endpoint}`;
-  },
-};
-
-export const ByteDance = {
-  ExampleEndpoint: "https://ark.cn-beijing.volces.com/api/",
-  ChatPath: "api/v3/chat/completions",
-};
-
-export const Alibaba = {
-  ExampleEndpoint: ALIBABA_BASE_URL,
-  ChatPath: (modelName: string) => {
-    if (modelName.includes("vl") || modelName.includes("omni")) {
-      return "v1/services/aigc/multimodal-generation/generation";
-    }
-    return `v1/services/aigc/text-generation/generation`;
-  },
-};
-
-export const Tencent = {
-  ExampleEndpoint: TENCENT_BASE_URL,
-};
-
-export const Moonshot = {
-  ExampleEndpoint: MOONSHOT_BASE_URL,
-  ChatPath: "v1/chat/completions",
-};
-
-export const Iflytek = {
-  ExampleEndpoint: IFLYTEK_BASE_URL,
-  ChatPath: "v1/chat/completions",
-};
-
-export const DeepSeek = {
-  ExampleEndpoint: DEEPSEEK_BASE_URL,
-  ChatPath: "chat/completions",
-};
-
-export const XAI = {
-  ExampleEndpoint: XAI_BASE_URL,
-  ChatPath: "v1/chat/completions",
-};
-
-export const ChatGLM = {
-  ExampleEndpoint: CHATGLM_BASE_URL,
-  ChatPath: "api/paas/v4/chat/completions",
-  ImagePath: "api/paas/v4/images/generations",
-  VideoPath: "api/paas/v4/videos/generations",
-};
-
-export const SiliconFlow = {
-  ExampleEndpoint: SILICONFLOW_BASE_URL,
-  ChatPath: "v1/chat/completions",
-  ListModelPath: "v1/models?&sub_type=chat",
-};
-
-export const AI302 = {
-  ExampleEndpoint: AI302_BASE_URL,
-  ChatPath: "v1/chat/completions",
-  EmbeddingsPath: "jina/v1/embeddings",
-  ListModelPath: "v1/models?llm=1",
 };
 
 export const DEFAULT_INPUT_TEMPLATE = `{{input}}`; // input / time / model / lang
@@ -292,7 +146,7 @@ You are ChatGPT, a large language model trained by {{ServiceProvider}}.
 Knowledge cutoff: {{cutoff}}
 Current model: {{model}}
 Current time: {{time}}
-Latex inline: \\(x^2\\) 
+Latex inline: \\(x^2\\)
 Latex block: $$e=mc^2$$
 `;
 
@@ -323,7 +177,7 @@ You are an AI assistant with access to system tools. Your role is to help users 
       - Use markdown code blocks with format: \`\`\`json:mcp:{clientId}\`\`\`
       - Always include:
         * method: "tools/call"（Only this method is supported）
-        * params: 
+        * params:
           - name: must match an available primitive name
           - arguments: required parameters for the primitive
 
@@ -392,7 +246,7 @@ You are an AI assistant with access to system tools. Your role is to help users 
    \`\`\`
 
    This is wrong because the method is not tools/call.
-   
+
    \`\`\`{
   "method": "search_repositories",
   "params": {
@@ -415,14 +269,13 @@ You are an AI assistant with access to system tools. Your role is to help users 
      }
    }
    \`\`\`
-   
+
    please follow the format strictly ONLY use tools/call method!!!!!!!!!!!
-   
+
 `;
 
 export const SUMMARIZE_MODEL = "gpt-4o-mini";
 export const GEMINI_SUMMARIZE_MODEL = "gemini-pro";
-export const DEEPSEEK_SUMMARIZE_MODEL = "deepseek-chat";
 
 export const KnowledgeCutOffDate: Record<string, string> = {
   default: "2021-09",
@@ -457,8 +310,6 @@ export const KnowledgeCutOffDate: Record<string, string> = {
   // it's now easier to add "KnowledgeCutOffDate" instead of stupid hardcoding it, as was done previously.
   "gemini-pro": "2023-12",
   "gemini-pro-vision": "2023-12",
-  "deepseek-chat": "2024-07",
-  "deepseek-coder": "2024-07",
 };
 
 export const DEFAULT_TTS_ENGINE = "OpenAI-TTS";
@@ -484,16 +335,11 @@ export const VISION_MODEL_REGEXES = [
   /gemini-exp/,
   /gemini-2\.[05]/,
   /learnlm/,
-  /qwen-vl/,
-  /qwen2-vl/,
   /gpt-4-turbo(?!.*preview)/,
   /^dall-e-3$/,
-  /glm-4v/,
-  /vl/i,
   /o3/,
   /o4-mini/,
-  /grok-4/i,
-  /gpt-5/
+  /gpt-5/,
 ];
 
 export const EXCLUDE_VISION_MODEL_REGEXES = [/claude-3-5-haiku-20241022/];
@@ -561,7 +407,7 @@ const googleModels = [
   "gemini-2.0-pro-exp",
   "gemini-2.0-pro-exp-02-05",
   "gemini-2.5-pro-preview-06-05",
-  "gemini-2.5-pro"
+  "gemini-2.5-pro",
 ];
 
 const anthropicModels = [
@@ -583,165 +429,6 @@ const anthropicModels = [
   "claude-opus-4-20250514",
 ];
 
-const baiduModels = [
-  "ernie-4.0-turbo-8k",
-  "ernie-4.0-8k",
-  "ernie-4.0-8k-preview",
-  "ernie-4.0-8k-preview-0518",
-  "ernie-4.0-8k-latest",
-  "ernie-3.5-8k",
-  "ernie-3.5-8k-0205",
-  "ernie-speed-128k",
-  "ernie-speed-8k",
-  "ernie-lite-8k",
-  "ernie-tiny-8k",
-];
-
-const bytedanceModels = [
-  "Doubao-lite-4k",
-  "Doubao-lite-32k",
-  "Doubao-lite-128k",
-  "Doubao-pro-4k",
-  "Doubao-pro-32k",
-  "Doubao-pro-128k",
-];
-
-const alibabaModes = [
-  "qwen-turbo",
-  "qwen-plus",
-  "qwen-max",
-  "qwen-max-0428",
-  "qwen-max-0403",
-  "qwen-max-0107",
-  "qwen-max-longcontext",
-  "qwen-omni-turbo",
-  "qwen-vl-plus",
-  "qwen-vl-max",
-];
-
-const tencentModels = [
-  "hunyuan-pro",
-  "hunyuan-standard",
-  "hunyuan-lite",
-  "hunyuan-role",
-  "hunyuan-functioncall",
-  "hunyuan-code",
-  "hunyuan-vision",
-];
-
-const moonshotModels = [
-  "moonshot-v1-auto",
-  "moonshot-v1-8k",
-  "moonshot-v1-32k",
-  "moonshot-v1-128k",
-  "moonshot-v1-8k-vision-preview",
-  "moonshot-v1-32k-vision-preview",
-  "moonshot-v1-128k-vision-preview",
-  "kimi-thinking-preview",
-  "kimi-k2-0711-preview",
-  "kimi-latest",
-];
-
-const iflytekModels = [
-  "general",
-  "generalv3",
-  "pro-128k",
-  "generalv3.5",
-  "4.0Ultra",
-];
-
-const deepseekModels = ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"];
-
-const xAIModes = [
-  "grok-beta",
-  "grok-2",
-  "grok-2-1212",
-  "grok-2-latest",
-  "grok-vision-beta",
-  "grok-2-vision-1212",
-  "grok-2-vision",
-  "grok-2-vision-latest",
-  "grok-3-mini-fast-beta",
-  "grok-3-mini-fast",
-  "grok-3-mini-fast-latest",
-  "grok-3-mini-beta",
-  "grok-3-mini",
-  "grok-3-mini-latest",
-  "grok-3-fast-beta",
-  "grok-3-fast",
-  "grok-3-fast-latest",
-  "grok-3-beta",
-  "grok-3",
-  "grok-3-latest",
-  "grok-4",
-  "grok-4-0709",
-  "grok-4-fast-non-reasoning",
-  "grok-4-fast-reasoning",
-  "grok-code-fast-1",
-];
-
-const chatglmModels = [
-  "glm-4-plus",
-  "glm-4-0520",
-  "glm-4",
-  "glm-4-air",
-  "glm-4-airx",
-  "glm-4-long",
-  "glm-4-flashx",
-  "glm-4-flash",
-  "glm-4v-plus",
-  "glm-4v",
-  "glm-4v-flash", // free
-  "cogview-3-plus",
-  "cogview-3",
-  "cogview-3-flash", // free
-  // 目前无法适配轮询任务
-  //   "cogvideox",
-  //   "cogvideox-flash", // free
-];
-
-const siliconflowModels = [
-  "Qwen/Qwen2.5-7B-Instruct",
-  "Qwen/Qwen2.5-72B-Instruct",
-  "deepseek-ai/DeepSeek-R1",
-  "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-  "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-  "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
-  "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
-  "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-  "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-  "deepseek-ai/DeepSeek-V3",
-  "meta-llama/Llama-3.3-70B-Instruct",
-  "THUDM/glm-4-9b-chat",
-  "Pro/deepseek-ai/DeepSeek-R1",
-  "Pro/deepseek-ai/DeepSeek-V3",
-];
-
-const ai302Models = [
-  "deepseek-chat",
-  "gpt-4o",
-  "chatgpt-4o-latest",
-  "llama3.3-70b",
-  "deepseek-reasoner",
-  "gemini-2.0-flash",
-  "claude-3-7-sonnet-20250219",
-  "claude-3-7-sonnet-latest",
-  "grok-3-beta",
-  "grok-3-mini-beta",
-  "gpt-4.1",
-  "gpt-4.1-mini",
-  "o3",
-  "o4-mini",
-  "qwen3-235b-a22b",
-  "qwen3-32b",
-  "gemini-2.5-pro-preview-05-06",
-  "llama-4-maverick",
-  "gemini-2.5-flash",
-  "claude-sonnet-4-20250514",
-  "claude-opus-4-20250514",
-  "gemini-2.5-pro",
-];
-
 let seq = 1000; // 内置的模型序号生成器从1000开始
 export const DEFAULT_MODELS = [
   ...openaiModels.map((name) => ({
@@ -755,17 +442,6 @@ export const DEFAULT_MODELS = [
       sorted: 1, // 这里是固定的，确保顺序与之前内置的版本一致
     },
   })),
-  ...openaiModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "azure",
-      providerName: "Azure",
-      providerType: "azure",
-      sorted: 2,
-    },
-  })),
   ...googleModels.map((name) => ({
     name,
     available: true,
@@ -774,7 +450,7 @@ export const DEFAULT_MODELS = [
       id: "google",
       providerName: "Google",
       providerType: "google",
-      sorted: 3,
+      sorted: 2,
     },
   })),
   ...anthropicModels.map((name) => ({
@@ -785,128 +461,7 @@ export const DEFAULT_MODELS = [
       id: "anthropic",
       providerName: "Anthropic",
       providerType: "anthropic",
-      sorted: 4,
-    },
-  })),
-  ...baiduModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "baidu",
-      providerName: "Baidu",
-      providerType: "baidu",
-      sorted: 5,
-    },
-  })),
-  ...bytedanceModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "bytedance",
-      providerName: "ByteDance",
-      providerType: "bytedance",
-      sorted: 6,
-    },
-  })),
-  ...alibabaModes.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "alibaba",
-      providerName: "Alibaba",
-      providerType: "alibaba",
-      sorted: 7,
-    },
-  })),
-  ...tencentModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "tencent",
-      providerName: "Tencent",
-      providerType: "tencent",
-      sorted: 8,
-    },
-  })),
-  ...moonshotModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "moonshot",
-      providerName: "Moonshot",
-      providerType: "moonshot",
-      sorted: 9,
-    },
-  })),
-  ...iflytekModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "iflytek",
-      providerName: "Iflytek",
-      providerType: "iflytek",
-      sorted: 10,
-    },
-  })),
-  ...xAIModes.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "xai",
-      providerName: "XAI",
-      providerType: "xai",
-      sorted: 11,
-    },
-  })),
-  ...chatglmModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "chatglm",
-      providerName: "ChatGLM",
-      providerType: "chatglm",
-      sorted: 12,
-    },
-  })),
-  ...deepseekModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "deepseek",
-      providerName: "DeepSeek",
-      providerType: "deepseek",
-      sorted: 13,
-    },
-  })),
-  ...siliconflowModels.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "siliconflow",
-      providerName: "SiliconFlow",
-      providerType: "siliconflow",
-      sorted: 14,
-    },
-  })),
-  ...ai302Models.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "ai302",
-      providerName: "302.AI",
-      providerType: "ai302",
-      sorted: 15,
+      sorted: 3,
     },
   })),
 ] as const;
