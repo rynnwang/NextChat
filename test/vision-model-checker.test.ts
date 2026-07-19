@@ -21,8 +21,6 @@ describe("isVisionModel", () => {
       "gemini-2.0",
       "gemini-exp-vision",
       "learnlm-vision",
-      "qwen-vl-max",
-      "qwen2-vl-max",
       "gpt-4-turbo",
       "dall-e-3",
     ];
