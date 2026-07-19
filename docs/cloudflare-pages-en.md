@@ -1,4 +1,7 @@
-# Cloudflare Pages Deployment Guide
+> **Deprecated**: this guide uses `@cloudflare/next-on-pages`, which Cloudflare no longer
+> recommends. Use the [Cloudflare Workers guide](./cloudflare-workers-en.md) instead.
+
+# Cloudflare Pages Deployment Guide (legacy)
 
 ## How to create a new project
 

@@ -69,5 +69,3 @@ async function handle(
 export const POST = handle;
 export const GET = handle;
 export const OPTIONS = handle;
-
-export const runtime = "edge";
