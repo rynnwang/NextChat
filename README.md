@@ -10,7 +10,7 @@ English / [简体中文](./README_CN.md)
 
 <a href="https://trendshift.io/repositories/5973" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5973" alt="ChatGPTNextWeb%2FChatGPT-Next-Web | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-✨ Light and Fast AI Assistant,with Claude, DeepSeek, GPT4 & Gemini Pro support.
+✨ Light and Fast AI Assistant, with Claude, GPT4 & Gemini Pro support.
 
 [![Saas][Saas-image]][saas-url]
 [![Web][Web-image]][web-url]
@@ -178,41 +178,29 @@ Access password, separated by comma.
 
 ### `OPENAI_API_KEY` (required)
 
-Your openai api key, join multiple api keys with comma.
+Your MaaS/OpenAI-compatible api key, join multiple api keys with comma.
 
 ### `BASE_URL` (optional)
 
-> Default: `https://api.openai.com`
+> Default: the MaaS gateway this fork talks to by default (see `OPENAI_BASE_URL` in `app/constant.ts`)
 
-> Examples: `http://your-openai-proxy.com`
+> Examples: `https://api.openai.com`, `http://your-openai-proxy.com`
 
-Override openai api request base url.
+Override the OpenAI-compatible api request base url.
 
 ### `OPENAI_ORG_ID` (optional)
 
 Specify OpenAI organization ID.
 
-### `AZURE_URL` (optional)
-
-> Example: https://{azure-resource-url}/openai
-
-Azure deploy url.
-
-### `AZURE_API_KEY` (optional)
-
-Azure Api Key.
-
-### `AZURE_API_VERSION` (optional)
-
-Azure Api Version, find it at [Azure Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#chat-completions).
-
 ### `GOOGLE_API_KEY` (optional)
 
-Google Gemini Pro Api Key.
+Google Gemini Api Key.
 
 ### `GOOGLE_URL` (optional)
 
-Google Gemini Pro Api Url.
+> Default: the MaaS gateway's Gemini-compatible endpoint (see `GEMINI_BASE_URL` in `app/constant.ts`)
+
+Google Gemini Api Url.
 
 ### `ANTHROPIC_API_KEY` (optional)
 
@@ -224,63 +212,9 @@ anthropic claude Api version.
 
 ### `ANTHROPIC_URL` (optional)
 
+> Default: the MaaS gateway's Anthropic-compatible endpoint (see `ANTHROPIC_BASE_URL` in `app/constant.ts`)
+
 anthropic claude Api Url.
-
-### `BAIDU_API_KEY` (optional)
-
-Baidu Api Key.
-
-### `BAIDU_SECRET_KEY` (optional)
-
-Baidu Secret Key.
-
-### `BAIDU_URL` (optional)
-
-Baidu Api Url.
-
-### `BYTEDANCE_API_KEY` (optional)
-
-ByteDance Api Key.
-
-### `BYTEDANCE_URL` (optional)
-
-ByteDance Api Url.
-
-### `ALIBABA_API_KEY` (optional)
-
-Alibaba Cloud Api Key.
-
-### `ALIBABA_URL` (optional)
-
-Alibaba Cloud Api Url.
-
-### `IFLYTEK_URL` (Optional)
-
-iflytek Api Url.
-
-### `IFLYTEK_API_KEY` (Optional)
-
-iflytek Api Key.
-
-### `IFLYTEK_API_SECRET` (Optional)
-
-iflytek Api Secret.
-
-### `CHATGLM_API_KEY` (optional)
-
-ChatGLM Api Key.
-
-### `CHATGLM_URL` (optional)
-
-ChatGLM Api Url.
-
-### `DEEPSEEK_API_KEY` (optional)
-
-DeepSeek Api Key.
-
-### `DEEPSEEK_URL` (optional)
-
-DeepSeek Api Url.
 
 ### `HIDE_USER_API_KEY` (optional)
 
@@ -315,15 +249,6 @@ To control custom models, use `+` to add a custom model, use `-` to hide a model
 
 User `-all` to disable all default models, `+all` to enable all default models.
 
-For Azure: use `modelName@Azure=deploymentName` to customize model name and deployment name.
-
-> Example: `+gpt-3.5-turbo@Azure=gpt35` will show option `gpt35(Azure)` in model list.
-> If you only can use Azure model, `-all,+gpt-3.5-turbo@Azure=gpt35` will `gpt35(Azure)` the only option in model list.
-
-For ByteDance: use `modelName@bytedance=deploymentName` to customize model name and deployment name.
-
-> Example: `+Doubao-lite-4k@bytedance=ep-xxxxx-xxx` will show option `Doubao-lite-4k(ByteDance)` in model list.
-
 ### `DEFAULT_MODEL` （optional）
 
 Change default model
@@ -335,45 +260,13 @@ Change default model
 
 Add additional models to have vision capabilities, beyond the default pattern matching. Multiple models should be separated by commas.
 
-### `WHITE_WEBDAV_ENDPOINTS` (optional)
-
-You can use this option if you want to increase the number of webdav service addresses you are allowed to access, as required by the format：
-
-- Each address must be a complete endpoint
-  > `https://xxxx/yyy`
-- Multiple addresses are connected by ', '
-
 ### `DEFAULT_INPUT_TEMPLATE` (optional)
 
 Customize the default template used to initialize the User Input Preprocessing configuration item in Settings.
 
-### `STABILITY_API_KEY` (optional)
-
-Stability API key.
-
-### `STABILITY_URL` (optional)
-
-Customize Stability API url.
-
 ### `ENABLE_MCP` (optional)
 
 Enable MCP（Model Context Protocol）Feature
-
-### `SILICONFLOW_API_KEY` (optional)
-
-SiliconFlow API Key.
-
-### `SILICONFLOW_URL` (optional)
-
-SiliconFlow API URL.
-
-### `AI302_API_KEY` (optional)
-
-302.AI API Key.
-
-### `AI302_URL` (optional)
-
-302.AI API URL.
 
 ## Requirements
 
