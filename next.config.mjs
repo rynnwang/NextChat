@@ -111,9 +111,12 @@ if (mode !== "export") {
   };
 }
 
-// Wires up `next dev` to read Cloudflare bindings (if any are added to
-// wrangler.jsonc later) from local dev storage. Only takes effect under
-// `next dev`, so it's safe to leave in for other build modes/targets.
-initOpenNextCloudflareForDev();
+// Wires up `next dev` to read Cloudflare bindings (AUTH_KV/CHAT_DB/
+// CHAT_FILES) from local dev storage, emulated via wrangler.dev.jsonc - the
+// deployed wrangler.jsonc intentionally omits these bindings (see the note
+// there), so this points at the dev-only copy that still declares them.
+// Only takes effect under `next dev`, so it's safe to leave in for other
+// build modes/targets.
+initOpenNextCloudflareForDev({ configPath: "wrangler.dev.jsonc" });
 
 export default nextConfig;
