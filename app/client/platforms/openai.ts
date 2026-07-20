@@ -2,7 +2,6 @@
 import {
   ApiPath,
   OPENAI_BASE_URL,
-  DEFAULT_MODELS,
   OpenaiPath,
   REQUEST_TIMEOUT_MS,
 } from "@/app/constant";
@@ -20,14 +19,12 @@ import {
   streamWithThink,
 } from "@/app/utils/chat";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
-import { toLLMModels } from "@/app/utils/model";
 import { ModelSize, DalleQuality, DalleStyle } from "@/app/typing";
 
 import {
   ChatOptions,
   getHeaders,
   LLMApi,
-  LLMModel,
   LLMUsage,
   MultimodalContent,
   SpeechOptions,
@@ -41,15 +38,6 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
-
-export interface OpenAIListModelResponse {
-  object: string;
-  data: Array<{
-    id: string;
-    object: string;
-    root: string;
-  }>;
-}
 
 export interface RequestPayload {
   messages: {
@@ -445,44 +433,6 @@ export class ChatGPTApi implements LLMApi {
       used: response.total_usage,
       total: total.hard_limit_usd,
     } as LLMUsage;
-  }
-
-  async models(): Promise<LLMModel[]> {
-    const provider = {
-      id: "openai",
-      providerName: "OpenAI",
-      providerType: "openai",
-      sorted: 1,
-    };
-    try {
-      const res = await fetch(this.path(OpenaiPath.ListModelPath), {
-        method: "GET",
-        headers: {
-          ...getHeaders(),
-        },
-      });
-      if (!res.ok) {
-        throw new Error(
-          `GET ${OpenaiPath.ListModelPath} failed: ${res.status} ${res.statusText}`,
-        );
-      }
-
-      const resJson = (await res.json()) as OpenAIListModelResponse;
-      const ids = (resJson.data ?? []).map((m) => m.id);
-      if (ids.length === 0) {
-        throw new Error("MaaS gateway returned an empty model list");
-      }
-      console.log("[Models] OpenAI-compatible endpoint reported", ids);
-      return toLLMModels(ids, provider);
-    } catch (e) {
-      console.error(
-        "[Models] failed to list models from the MaaS gateway, falling back to the built-in list",
-        e,
-      );
-      return DEFAULT_MODELS.filter(
-        (m) => m.provider?.providerType === provider.providerType,
-      );
-    }
   }
 }
 export { OpenaiPath };

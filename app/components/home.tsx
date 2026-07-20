@@ -11,7 +11,7 @@ import LoadingIcon from "../icons/three-dots.svg";
 import { getCSSVar } from "../utils";
 
 import dynamic from "next/dynamic";
-import { ModelProvider, Path, SlotID } from "../constant";
+import { Path, SlotID } from "../constant";
 import { ErrorBoundary } from "./error";
 
 import { getISOLang, getLang } from "../locales";
@@ -27,7 +27,7 @@ import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { SiteAuthGate } from "./site-auth-gate";
 import { getClientConfig } from "../config/client";
-import { ClientApi } from "../client/api";
+import { fetchMaasModels } from "../utils/model";
 import { useAccessStore } from "../store";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
@@ -207,30 +207,17 @@ function Screen() {
   );
 }
 
-// Every kept provider is one endpoint on the same MaaS account (see
-// docs/cloudflare-workers-en.md), so refresh all three model lists on load -
-// not just whichever provider the current session happens to be using -
-// so the model picker always reflects everything the gateway serves.
-const ALL_MODEL_PROVIDERS = [
-  ModelProvider.GPT,
-  ModelProvider.GeminiPro,
-  ModelProvider.Claude,
-];
-
 export function useLoadData() {
   const config = useAppConfig();
 
   useEffect(() => {
     (async () => {
-      const results = await Promise.allSettled(
-        ALL_MODEL_PROVIDERS.map((provider) =>
-          new ClientApi(provider).llm.models(),
-        ),
-      );
-      const models = results.flatMap((r) =>
-        r.status === "fulfilled" ? r.value : [],
-      );
-      config.mergeModels(models);
+      try {
+        const models = await fetchMaasModels();
+        config.update((c) => (c.models = models));
+      } catch (e) {
+        console.error("[MaaS] failed to load configured models", e);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

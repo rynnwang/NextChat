@@ -387,7 +387,7 @@ export const DEFAULT_MODELS = [
     provider: {
       id: "openai",
       providerName: "OpenAI",
-      providerType: "openai",
+      providerType: "openai" as const,
       sorted: 1, // 这里是固定的，确保顺序与之前内置的版本一致
     },
   })),
@@ -398,7 +398,7 @@ export const DEFAULT_MODELS = [
     provider: {
       id: "google",
       providerName: "Google",
-      providerType: "google",
+      providerType: "google" as const,
       sorted: 2,
     },
   })),
@@ -409,7 +409,7 @@ export const DEFAULT_MODELS = [
     provider: {
       id: "anthropic",
       providerName: "Anthropic",
-      providerType: "anthropic",
+      providerType: "anthropic" as const,
       sorted: 3,
     },
   })),

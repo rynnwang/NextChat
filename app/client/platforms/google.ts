@@ -1,9 +1,8 @@
-import { ApiPath, DEFAULT_MODELS, Google } from "@/app/constant";
+import { ApiPath, Google } from "@/app/constant";
 import {
   ChatOptions,
   getHeaders,
   LLMApi,
-  LLMModel,
   LLMUsage,
   SpeechOptions,
 } from "../api";
@@ -25,7 +24,6 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { preProcessImageContent } from "@/app/utils/chat";
-import { toLLMModels } from "@/app/utils/model";
 import { nanoid } from "nanoid";
 import { RequestPayload } from "./openai";
 import { fetch } from "@/app/utils/stream";
@@ -311,44 +309,5 @@ export class GeminiProApi implements LLMApi {
   }
   usage(): Promise<LLMUsage> {
     throw new Error("Method not implemented.");
-  }
-  async models(): Promise<LLMModel[]> {
-    const provider = {
-      id: "google",
-      providerName: "Google",
-      providerType: "google",
-      sorted: 2,
-    };
-    try {
-      const res = await fetch(this.path(Google.ListModelPath), {
-        method: "GET",
-        headers: { ...getHeaders() },
-      });
-      if (!res.ok) {
-        throw new Error(
-          `GET ${Google.ListModelPath} failed: ${res.status} ${res.statusText}`,
-        );
-      }
-
-      const resJson = (await res.json()) as {
-        models?: Array<{ name?: string }>;
-      };
-      const ids = (resJson.models ?? [])
-        .map((m) => m.name?.replace(/^models\//, ""))
-        .filter((id): id is string => !!id);
-      if (ids.length === 0) {
-        throw new Error("MaaS gateway returned an empty model list");
-      }
-      console.log("[Models] Gemini-compatible endpoint reported", ids);
-      return toLLMModels(ids, provider);
-    } catch (e) {
-      console.error(
-        "[Models] failed to list Gemini models from the MaaS gateway, falling back to the built-in list",
-        e,
-      );
-      return DEFAULT_MODELS.filter(
-        (m) => m.provider?.providerType === provider.providerType,
-      );
-    }
   }
 }

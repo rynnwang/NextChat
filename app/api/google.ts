@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "./auth";
-import { getServerSideConfig } from "@/app/config/server";
-import { ApiPath, GEMINI_BASE_URL, ModelProvider } from "@/app/constant";
+import { requireSession } from "@/app/server/require-session";
+import {
+  resolveMaasEndpoint,
+  isErrorResponse,
+} from "@/app/server/maas-request";
+import { ApiPath } from "@/app/constant";
 import { prettyObject } from "@/app/utils/format";
-
-const serverConfig = getServerSideConfig();
 
 export async function handle(
   req: NextRequest,
@@ -16,33 +17,19 @@ export async function handle(
     return NextResponse.json({ body: "OK" }, { status: 200 });
   }
 
-  const authResult = auth(req, ModelProvider.GeminiPro);
-  if (authResult.error) {
-    return NextResponse.json(authResult, {
-      status: 401,
-    });
-  }
+  const denied = await requireSession(req);
+  if (denied) return denied;
 
-  const bearToken =
-    req.headers.get("x-goog-api-key") || req.headers.get("Authorization") || "";
-  const token = bearToken.trim().replaceAll("Bearer ", "").trim();
+  const endpoint = await resolveMaasEndpoint(req, "gemini");
+  if (isErrorResponse(endpoint)) return endpoint;
 
-  const apiKey = token ? token : serverConfig.googleApiKey;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error: true,
-        message: `missing GOOGLE_API_KEY in server env vars`,
-      },
-      {
-        status: 401,
-      },
-    );
-  }
   try {
-    const response = await request(req, apiKey);
-    return response;
+    return await request(
+      req,
+      endpoint.baseUrl,
+      endpoint.apiKey,
+      endpoint.extraHeaders,
+    );
   } catch (e) {
     console.error("[Google] ", e);
     return NextResponse.json(prettyObject(e));
@@ -52,11 +39,15 @@ export async function handle(
 export const GET = handle;
 export const POST = handle;
 
-async function request(req: NextRequest, apiKey: string) {
+async function request(
+  req: NextRequest,
+  configuredBaseUrl: string,
+  apiKey: string,
+  extraHeaders: Record<string, string> | undefined,
+) {
   const controller = new AbortController();
 
-  let baseUrl = serverConfig.googleUrl || GEMINI_BASE_URL;
-
+  let baseUrl = configuredBaseUrl;
   let path = `${req.nextUrl.pathname}`.replaceAll(ApiPath.Google, "");
 
   if (!baseUrl.startsWith("http")) {
@@ -85,9 +76,8 @@ async function request(req: NextRequest, apiKey: string) {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      "x-goog-api-key":
-        req.headers.get("x-goog-api-key") ||
-        (req.headers.get("Authorization") ?? "").replace("Bearer ", ""),
+      "x-goog-api-key": apiKey,
+      ...extraHeaders,
     },
     method: req.method,
     body: req.body,
