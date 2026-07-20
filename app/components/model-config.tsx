@@ -7,19 +7,40 @@ import { ListItem, Select } from "./ui-lib";
 import { useAllModels } from "../utils/hooks";
 import { groupBy } from "lodash-es";
 import styles from "./model-config.module.scss";
-import { getModelProvider } from "../utils/model";
+
+type PickableModel = ReturnType<typeof useAllModels>[number];
+
+// Each option's value uniquely identifies one model: its literal API name
+// plus which configured MaaS provider row serves it (there can be more than
+// one provider offering the same protocol, so the protocol name alone isn't
+// enough to disambiguate).
+function optionValue(m: PickableModel): string {
+  return `${m.name}@@${m.provider?.id}`;
+}
+
+function findModel(
+  models: PickableModel[],
+  value: string,
+): PickableModel | undefined {
+  const sep = value.lastIndexOf("@@");
+  if (sep === -1) return undefined;
+  const name = value.slice(0, sep);
+  const providerId = value.slice(sep + 2);
+  return models.find((m) => m.name === name && m.provider?.id === providerId);
+}
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
 }) {
   const allModels = useAllModels();
+  const availableModels = allModels.filter((v) => v.available);
   const groupModels = groupBy(
-    allModels.filter((v) => v.available),
-    "provider.providerName",
+    availableModels,
+    (v) => v.provider?.maasProviderLabel ?? v.provider?.providerName,
   );
-  const value = `${props.modelConfig.model}@${props.modelConfig?.providerName}`;
-  const compressModelValue = `${props.modelConfig.compressModel}@${props.modelConfig?.compressProviderName}`;
+  const value = `${props.modelConfig.model}@@${props.modelConfig?.maasProviderId}`;
+  const compressModelValue = `${props.modelConfig.compressModel}@@${props.modelConfig?.compressProviderId}`;
 
   return (
     <>
@@ -29,19 +50,20 @@ export function ModelConfigList(props: {
           value={value}
           align="left"
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
-              e.currentTarget.value,
-            );
+            const selected = findModel(availableModels, e.currentTarget.value);
+            if (!selected) return;
             props.updateConfig((config) => {
-              config.model = ModalConfigValidator.model(model);
-              config.providerName = providerName as ServiceProvider;
+              config.model = ModalConfigValidator.model(selected.name);
+              config.providerName = selected.provider
+                ?.providerName as ServiceProvider;
+              config.maasProviderId = selected.provider?.id ?? "";
             });
           }}
         >
-          {Object.keys(groupModels).map((providerName, index) => (
-            <optgroup label={providerName} key={index}>
-              {groupModels[providerName].map((v, i) => (
-                <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
+          {Object.keys(groupModels).map((label, index) => (
+            <optgroup label={label} key={index}>
+              {groupModels[label].map((v, i) => (
+                <option value={optionValue(v)} key={i}>
                   {v.displayName}
                 </option>
               ))}
@@ -250,22 +272,22 @@ export function ModelConfigList(props: {
           aria-label={Locale.Settings.CompressModel.Title}
           value={compressModelValue}
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
-              e.currentTarget.value,
-            );
+            const selected = findModel(availableModels, e.currentTarget.value);
+            if (!selected) return;
             props.updateConfig((config) => {
-              config.compressModel = ModalConfigValidator.model(model);
-              config.compressProviderName = providerName as ServiceProvider;
+              config.compressModel = ModalConfigValidator.model(selected.name);
+              config.compressProviderName = selected.provider
+                ?.providerName as ServiceProvider;
+              config.compressProviderId = selected.provider?.id ?? "";
             });
           }}
         >
-          {allModels
-            .filter((v) => v.available)
-            .map((v, i) => (
-              <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
-                {v.displayName}({v.provider?.providerName})
-              </option>
-            ))}
+          {availableModels.map((v, i) => (
+            <option value={optionValue(v)} key={i}>
+              {v.displayName}(
+              {v.provider?.maasProviderLabel ?? v.provider?.providerName})
+            </option>
+          ))}
         </Select>
       </ListItem>
     </>

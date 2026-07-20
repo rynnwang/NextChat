@@ -1,5 +1,53 @@
-import { DEFAULT_MODELS } from "../constant";
+import { DEFAULT_MODELS, ServiceProvider } from "../constant";
 import { LLMModel } from "../client/api";
+
+interface MaasModelWithProvider {
+  providerId: string;
+  providerLabel: string;
+  providerEnabled: boolean;
+  protocol: "openai" | "anthropic" | "gemini";
+  modelName: string;
+  displayName: string;
+  available: boolean;
+  sortOrder: number;
+}
+
+function protocolToServiceProvider(
+  protocol: MaasModelWithProvider["protocol"],
+): ServiceProvider {
+  switch (protocol) {
+    case "anthropic":
+      return ServiceProvider.Anthropic;
+    case "gemini":
+      return ServiceProvider.Google;
+    default:
+      return ServiceProvider.OpenAI;
+  }
+}
+
+// Fetches every model across every configured MaaS provider (see
+// app/server/maas-store.ts) - this is the sole source of selectable models
+// now; there is no built-in fallback list.
+export async function fetchMaasModels(): Promise<LLMModel[]> {
+  const res = await fetch("/api/maas/models", { credentials: "same-origin" });
+  if (!res.ok) {
+    throw new Error(`GET /api/maas/models failed: ${res.status}`);
+  }
+  const rows = (await res.json()) as MaasModelWithProvider[];
+  return rows.map((row) => ({
+    name: row.modelName,
+    displayName: row.displayName,
+    available: row.available && row.providerEnabled,
+    sorted: row.sortOrder,
+    provider: {
+      id: row.providerId,
+      providerName: protocolToServiceProvider(row.protocol),
+      providerType: row.protocol === "gemini" ? "google" : row.protocol,
+      maasProviderLabel: row.providerLabel,
+      sorted: row.sortOrder,
+    },
+  }));
+}
 
 const CustomSeq = {
   val: -1000, //To ensure the custom model located at front, start from -1000, refer to constant.ts
@@ -18,27 +66,9 @@ const CustomSeq = {
 const customProvider = (providerName: string) => ({
   id: providerName.toLowerCase(),
   providerName: providerName,
-  providerType: "custom",
+  providerType: "custom" as const,
   sorted: CustomSeq.next(providerName),
 });
-
-/**
- * Turns a flat list of model ids/names reported by a provider's own model-listing
- * endpoint into `LLMModel[]`, matching the shape/sort-seed of the static
- * `DEFAULT_MODELS` list in constant.ts so both sources sort consistently.
- */
-export function toLLMModels(
-  names: string[],
-  provider: LLMModel["provider"],
-): LLMModel[] {
-  let seq = 1000; // matches DEFAULT_MODELS' starting sequence in constant.ts
-  return names.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider,
-  }));
-}
 
 /**
  * Sorts an array of models based on specified rules.

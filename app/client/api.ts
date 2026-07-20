@@ -83,9 +83,20 @@ export interface LLMModel {
 }
 
 export interface LLMModelProvider {
+  // The configured MaaS provider's id (see app/server/maas-store.ts), not a
+  // fixed protocol slug - there can be several providers of the same
+  // providerType.
   id: string;
+  // The ServiceProvider enum string ("OpenAI"/"Anthropic"/"Google") matching
+  // providerType - kept distinct from the provider's own display label since
+  // this is used as a protocol discriminator throughout the client.
   providerName: string;
-  providerType: string;
+  providerType: "openai" | "anthropic" | "google" | "custom";
+  // The configured MaaS provider's own user-chosen label (e.g. "Personal
+  // MaaS"), used for display/grouping in the model picker. Absent for
+  // locally-defined "custom model" entries that aren't backed by any
+  // configured MaaS provider.
+  maasProviderLabel?: string;
   sorted: number;
 }
 
@@ -93,7 +104,6 @@ export abstract class LLMApi {
   abstract chat(options: ChatOptions): Promise<void>;
   abstract speech(options: SpeechOptions): Promise<ArrayBuffer>;
   abstract usage(): Promise<LLMUsage>;
-  abstract models(): Promise<LLMModel[]>;
 }
 
 type ProviderName = "openai" | "azure" | "claude" | "palm";
@@ -218,6 +228,7 @@ export function getHeaders(ignoreHeaders: boolean = false) {
       isAnthropic,
       apiKey,
       isEnabledAccessControl,
+      maasProviderId: modelConfig.maasProviderId,
     };
   }
 
@@ -229,7 +240,13 @@ export function getHeaders(ignoreHeaders: boolean = false) {
       : "Authorization";
   }
 
-  const { isGoogle, isAnthropic, apiKey, isEnabledAccessControl } = getConfig();
+  const {
+    isGoogle,
+    isAnthropic,
+    apiKey,
+    isEnabledAccessControl,
+    maasProviderId,
+  } = getConfig();
 
   const authHeader = getAuthHeader();
 
@@ -241,6 +258,13 @@ export function getHeaders(ignoreHeaders: boolean = false) {
     headers["Authorization"] = getBearerToken(
       ACCESS_CODE_PREFIX + accessStore.accessCode,
     );
+  }
+
+  // Tells our /api/{openai,anthropic,google} proxy routes which configured
+  // MaaS provider row to resolve the real base URL/key from - there's no
+  // longer a single implicit gateway once more than one provider exists.
+  if (maasProviderId) {
+    headers["X-Maas-Provider-Id"] = maasProviderId;
   }
 
   return headers;

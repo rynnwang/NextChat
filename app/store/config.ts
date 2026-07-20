@@ -60,11 +60,19 @@ export const DEFAULT_CONFIG = {
   hideBuiltinMasks: false, // dont add builtin masks
 
   customModels: "",
-  models: DEFAULT_MODELS as any as LLMModel[],
+  // Starts empty - models are entirely user-configured (see the MaaS
+  // provider management UI) rather than seeded from a built-in list, so an
+  // unconfigured deployment doesn't show phantom "available" models that
+  // would fail at request time.
+  models: [] as LLMModel[],
 
   modelConfig: {
     model: "gpt-4o-mini" as ModelType,
     providerName: "OpenAI" as ServiceProvider,
+    // Which configured MaaS provider (see app/server/maas-store.ts) the
+    // selected model is invoked through - required since more than one
+    // provider can offer the same protocol.
+    maasProviderId: "",
     temperature: 0.5,
     top_p: 1,
     max_tokens: 4000,
@@ -75,6 +83,7 @@ export const DEFAULT_CONFIG = {
     compressMessageLengthThreshold: 1000,
     compressModel: "",
     compressProviderName: "",
+    compressProviderId: "",
     enableInjectSystemPrompts: true,
     template: config?.template ?? DEFAULT_INPUT_TEMPLATE,
     size: "1024x1024" as ModelSize,
@@ -161,29 +170,6 @@ export const useAppConfig = createPersistStore(
   (set, get) => ({
     reset() {
       set(() => ({ ...DEFAULT_CONFIG }));
-    },
-
-    mergeModels(newModels: LLMModel[]) {
-      if (!newModels || newModels.length === 0) {
-        return;
-      }
-
-      const oldModels = get().models;
-      const modelMap: Record<string, LLMModel> = {};
-
-      for (const model of oldModels) {
-        model.available = false;
-        modelMap[`${model.name}@${model?.provider?.id}`] = model;
-      }
-
-      for (const model of newModels) {
-        model.available = true;
-        modelMap[`${model.name}@${model?.provider?.id}`] = model;
-      }
-
-      set(() => ({
-        models: Object.values(modelMap),
-      }));
     },
 
     allModels() {},
