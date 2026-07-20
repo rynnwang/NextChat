@@ -8,7 +8,6 @@ describe("collectModelTableWithDefaultModel", () => {
   test("marks a fully-qualified default model (name@provider) as default", () => {
     const table = collectModelTableWithDefaultModel(
       DEFAULT_MODELS,
-      "",
       "gpt-4o@openai",
     );
     expect(table["gpt-4o@openai"].isDefault).toBe(true);
@@ -17,7 +16,6 @@ describe("collectModelTableWithDefaultModel", () => {
   test("marks the first available match when the default omits the provider", () => {
     const table = collectModelTableWithDefaultModel(
       DEFAULT_MODELS,
-      "",
       "gpt-4.1-mini",
     );
     expect(table["gpt-4.1-mini@openai"].isDefault).toBe(true);
@@ -26,14 +24,13 @@ describe("collectModelTableWithDefaultModel", () => {
   test("flags exactly one model as default", () => {
     const table = collectModelTableWithDefaultModel(
       DEFAULT_MODELS,
-      "",
       "gpt-4o@openai",
     );
     expect(Object.values(table).filter((m) => m.isDefault)).toHaveLength(1);
   });
 
   test("leaves every model un-flagged when defaultModel is empty", () => {
-    const table = collectModelTableWithDefaultModel(DEFAULT_MODELS, "", "");
+    const table = collectModelTableWithDefaultModel(DEFAULT_MODELS, "");
     expect(Object.values(table).some((m) => m.isDefault)).toBe(false);
   });
 });
@@ -42,7 +39,6 @@ describe("collectModelsWithDefaultModel", () => {
   test("returns the model list with exactly the chosen default flagged", () => {
     const models = collectModelsWithDefaultModel(
       DEFAULT_MODELS,
-      "",
       "gpt-4o@openai",
     );
     const defaults = models.filter((m) => m.isDefault);

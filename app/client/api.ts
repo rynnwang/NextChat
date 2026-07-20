@@ -91,11 +91,9 @@ export interface LLMModelProvider {
   // providerType - kept distinct from the provider's own display label since
   // this is used as a protocol discriminator throughout the client.
   providerName: string;
-  providerType: "openai" | "anthropic" | "google" | "custom";
+  providerType: "openai" | "anthropic" | "google";
   // The configured MaaS provider's own user-chosen label (e.g. "Personal
-  // MaaS"), used for display/grouping in the model picker. Absent for
-  // locally-defined "custom model" entries that aren't backed by any
-  // configured MaaS provider.
+  // MaaS"), used for display/grouping in the model picker.
   maasProviderLabel?: string;
   sorted: number;
 }
