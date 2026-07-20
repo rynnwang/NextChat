@@ -113,6 +113,7 @@ export enum ModelProvider {
 export const Anthropic = {
   ChatPath: "v1/messages",
   ChatPath1: "v1/complete",
+  ListModelPath: "v1/models",
   ExampleEndpoint: "https://api.anthropic.com",
   Vision: "2023-06-01",
 };
@@ -130,6 +131,7 @@ export const Google = {
   ExampleEndpoint: "https://generativelanguage.googleapis.com/",
   ChatPath: (modelName: string) =>
     `v1beta/models/${modelName}:streamGenerateContent`,
+  ListModelPath: "v1beta/models",
 };
 
 export const DEFAULT_INPUT_TEMPLATE = `{{input}}`; // input / time / model / lang
@@ -344,86 +346,33 @@ export const VISION_MODEL_REGEXES = [
 
 export const EXCLUDE_VISION_MODEL_REGEXES = [/claude-3-5-haiku-20241022/];
 
+// These three lists are now only an emergency fallback seed - used for the very
+// first paint before the dynamic model-discovery fetch (see the client platform
+// files' models()) resolves, and if that fetch fails outright (network error,
+// gateway down). They're deliberately small: the MaaS gateway's actual model
+// list is the real source of truth now, not this hardcoded set, so there's no
+// need to keep this in lockstep with every new model release upstream.
 const openaiModels = [
-  // As of July 2024, gpt-4o-mini should be used in place of gpt-3.5-turbo,
-  // as it is cheaper, more capable, multimodal, and just as fast. gpt-3.5-turbo is still available for use in the API.
-  "gpt-3.5-turbo",
-  "gpt-3.5-turbo-1106",
-  "gpt-3.5-turbo-0125",
-  "gpt-4",
-  "gpt-4-0613",
-  "gpt-4-32k",
-  "gpt-4-32k-0613",
-  "gpt-4-turbo",
-  "gpt-4-turbo-preview",
-  "gpt-4.1",
-  "gpt-4.1-2025-04-14",
-  "gpt-4.1-mini",
-  "gpt-4.1-mini-2025-04-14",
-  "gpt-4.1-nano",
-  "gpt-4.1-nano-2025-04-14",
-  "gpt-4.5-preview",
-  "gpt-4.5-preview-2025-02-27",
-  "gpt-5-chat",
-  "gpt-5-mini",
-  "gpt-5-nano",
-  "gpt-5",
-  "gpt-5-chat-2025-01-01-preview",
   "gpt-4o",
-  "gpt-4o-2024-05-13",
-  "gpt-4o-2024-08-06",
-  "gpt-4o-2024-11-20",
-  "chatgpt-4o-latest",
   "gpt-4o-mini",
-  "gpt-4o-mini-2024-07-18",
-  "gpt-4-vision-preview",
-  "gpt-4-turbo-2024-04-09",
-  "gpt-4-1106-preview",
-  "dall-e-3",
-  "o1-mini",
-  "o1-preview",
-  "o3-mini",
+  "gpt-4.1",
+  "gpt-4.1-mini",
+  "gpt-5",
   "o3",
   "o4-mini",
+  "dall-e-3",
 ];
 
 const googleModels = [
-  "gemini-1.5-pro-latest",
   "gemini-1.5-pro",
-  "gemini-1.5-pro-002",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-flash-8b-latest",
   "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-flash-002",
-  "learnlm-1.5-pro-experimental",
-  "gemini-exp-1206",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-exp",
-  "gemini-2.0-flash-lite-preview-02-05",
-  "gemini-2.0-flash-thinking-exp",
-  "gemini-2.0-flash-thinking-exp-1219",
-  "gemini-2.0-flash-thinking-exp-01-21",
-  "gemini-2.0-pro-exp",
-  "gemini-2.0-pro-exp-02-05",
-  "gemini-2.5-pro-preview-06-05",
   "gemini-2.5-pro",
 ];
 
 const anthropicModels = [
-  "claude-instant-1.2",
-  "claude-2.0",
-  "claude-2.1",
-  "claude-3-sonnet-20240229",
-  "claude-3-opus-20240229",
-  "claude-3-opus-latest",
-  "claude-3-haiku-20240307",
-  "claude-3-5-haiku-20241022",
-  "claude-3-5-haiku-latest",
-  "claude-3-5-sonnet-20240620",
-  "claude-3-5-sonnet-20241022",
   "claude-3-5-sonnet-latest",
-  "claude-3-7-sonnet-20250219",
+  "claude-3-5-haiku-latest",
   "claude-3-7-sonnet-latest",
   "claude-sonnet-4-20250514",
   "claude-opus-4-20250514",

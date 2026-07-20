@@ -1,5 +1,11 @@
-import { Anthropic, ApiPath } from "@/app/constant";
-import { ChatOptions, getHeaders, LLMApi, SpeechOptions } from "../api";
+import { Anthropic, ApiPath, DEFAULT_MODELS } from "@/app/constant";
+import {
+  ChatOptions,
+  getHeaders,
+  LLMApi,
+  LLMModel,
+  SpeechOptions,
+} from "../api";
 import {
   useAccessStore,
   useAppConfig,
@@ -12,6 +18,7 @@ import { ANTHROPIC_BASE_URL } from "@/app/constant";
 import { getMessageTextContent, isVisionModel } from "@/app/utils";
 import { preProcessImageContent, stream } from "@/app/utils/chat";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
+import { toLLMModels } from "@/app/utils/model";
 import { RequestPayload } from "./openai";
 import { fetch } from "@/app/utils/stream";
 
@@ -224,7 +231,11 @@ export class ClaudeApi implements LLMApi {
           let chunkJson:
             | undefined
             | {
-                type: "content_block_delta" | "content_block_stop" | "message_delta" | "message_stop";
+                type:
+                  | "content_block_delta"
+                  | "content_block_stop"
+                  | "message_delta"
+                  | "message_stop";
                 content_block?: {
                   type: "tool_use";
                   id: string;
@@ -243,8 +254,11 @@ export class ClaudeApi implements LLMApi {
           // Handle refusal stop reason in message_delta
           if (chunkJson?.delta?.stop_reason === "refusal") {
             // Return a message to display to the user
-            const refusalMessage = "\n\n[Assistant refused to respond. Please modify your request and try again.]";
-            options.onError?.(new Error("Content policy violation: " + refusalMessage));
+            const refusalMessage =
+              "\n\n[Assistant refused to respond. Please modify your request and try again.]";
+            options.onError?.(
+              new Error("Content policy violation: " + refusalMessage),
+            );
             return refusalMessage;
           }
 
@@ -346,45 +360,44 @@ export class ClaudeApi implements LLMApi {
       total: 0,
     };
   }
-  async models() {
-    // const provider = {
-    //   id: "anthropic",
-    //   providerName: "Anthropic",
-    //   providerType: "anthropic",
-    // };
+  async models(): Promise<LLMModel[]> {
+    const provider = {
+      id: "anthropic",
+      providerName: "Anthropic",
+      providerType: "anthropic",
+      sorted: 3,
+    };
+    try {
+      const accessStore = useAccessStore.getState();
+      const res = await fetch(this.path(Anthropic.ListModelPath), {
+        method: "GET",
+        headers: {
+          ...getHeaders(),
+          "anthropic-version": accessStore.anthropicApiVersion,
+        },
+      });
+      if (!res.ok) {
+        throw new Error(
+          `GET ${Anthropic.ListModelPath} failed: ${res.status} ${res.statusText}`,
+        );
+      }
 
-    return [
-      // {
-      //   name: "claude-instant-1.2",
-      //   available: true,
-      //   provider,
-      // },
-      // {
-      //   name: "claude-2.0",
-      //   available: true,
-      //   provider,
-      // },
-      // {
-      //   name: "claude-2.1",
-      //   available: true,
-      //   provider,
-      // },
-      // {
-      //   name: "claude-3-opus-20240229",
-      //   available: true,
-      //   provider,
-      // },
-      // {
-      //   name: "claude-3-sonnet-20240229",
-      //   available: true,
-      //   provider,
-      // },
-      // {
-      //   name: "claude-3-haiku-20240307",
-      //   available: true,
-      //   provider,
-      // },
-    ];
+      const resJson = (await res.json()) as { data?: Array<{ id: string }> };
+      const ids = (resJson.data ?? []).map((m) => m.id);
+      if (ids.length === 0) {
+        throw new Error("MaaS gateway returned an empty model list");
+      }
+      console.log("[Models] Anthropic-compatible endpoint reported", ids);
+      return toLLMModels(ids, provider);
+    } catch (e) {
+      console.error(
+        "[Models] failed to list Anthropic models from the MaaS gateway, falling back to the built-in list",
+        e,
+      );
+      return DEFAULT_MODELS.filter(
+        (m) => m.provider?.providerType === provider.providerType,
+      );
+    }
   }
   path(path: string): string {
     const accessStore = useAccessStore.getState();

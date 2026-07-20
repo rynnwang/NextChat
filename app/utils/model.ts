@@ -23,6 +23,24 @@ const customProvider = (providerName: string) => ({
 });
 
 /**
+ * Turns a flat list of model ids/names reported by a provider's own model-listing
+ * endpoint into `LLMModel[]`, matching the shape/sort-seed of the static
+ * `DEFAULT_MODELS` list in constant.ts so both sources sort consistently.
+ */
+export function toLLMModels(
+  names: string[],
+  provider: LLMModel["provider"],
+): LLMModel[] {
+  let seq = 1000; // matches DEFAULT_MODELS' starting sequence in constant.ts
+  return names.map((name) => ({
+    name,
+    available: true,
+    sorted: seq++,
+    provider,
+  }));
+}
+
+/**
  * Sorts an array of models based on specified rules.
  *
  * First, sorted by provider; if the same, sorted by model
