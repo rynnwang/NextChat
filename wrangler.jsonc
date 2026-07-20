@@ -10,34 +10,22 @@
   },
   "observability": {
     "enabled": true
-  },
-  // --- Storage bindings - see docs/cloudflare-workers-en.md step 2 for the
-  // exact "create X named Y" steps. Quick reference:
-  //   KV  -> create a namespace named "nextchat-auth",       then paste its
-  //          Namespace ID below (no way around this: KV has no name field
-  //          in this config, only an opaque ID Cloudflare generates).
-  //   D1  -> create a database named exactly "nextchat-db",  then paste its
-  //          Database ID below (same reason as KV).
-  //   R2  -> create a bucket named exactly "nextchat-chat-files" - nothing
-  //          to paste here, the bucket_name below already matches it.
-  "kv_namespaces": [
-    {
-      "binding": "AUTH_KV",
-      "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
-    }
-  ],
-  "d1_databases": [
-    {
-      "binding": "CHAT_DB",
-      "database_name": "nextchat-db",
-      "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "CHAT_FILES",
-      "bucket_name": "nextchat-chat-files"
-    }
-  ]
+  }
+  // --- Storage bindings (AUTH_KV, CHAT_DB, CHAT_FILES) are intentionally
+  // NOT declared here. This Worker auto-redeploys via `wrangler deploy` on
+  // every push, and Wrangler treats this file as authoritative for a
+  // Worker's bindings - declaring them here means every deploy re-applies
+  // whatever is committed (even a placeholder), silently discarding any
+  // change made by hand in the dashboard afterward. Instead, bind
+  // AUTH_KV/CHAT_DB/CHAT_FILES manually under the Worker's
+  // Settings -> Bindings tab - see docs/cloudflare-workers-en.md step 2.
+  //
+  // UNVERIFIED: Cloudflare's own docs don't fully confirm that omitting a
+  // binding here (as opposed to declaring a wrong/placeholder value)
+  // reliably preserves a dashboard-set one across every deploy. Test this
+  // after your next push (rebind, push something trivial, check
+  // Settings -> Bindings survived) rather than assuming it holds.
+  //
+  // For local dev/testing, see wrangler.dev.jsonc, which still declares
+  // these bindings so `yarn cf:preview`/`cf:d1:migrate:*` keep working.
 }

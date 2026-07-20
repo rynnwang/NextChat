@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // LOCAL DEV / CLI ONLY. Cloudflare's Git-integrated build does NOT use this
+  // file - it deploys with the plain wrangler.jsonc, which intentionally
+  // omits the bindings below (see the note there for why). This copy exists
+  // purely so `yarn cf:preview` and the `cf:d1:migrate:*` scripts can still
+  // emulate/target AUTH_KV/CHAT_DB/CHAT_FILES locally. If you change the
+  // non-binding fields below (name, compatibility_date, etc.), keep them in
+  // sync with wrangler.jsonc.
+  "name": "nextchat",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KV",
+      // For local `wrangler dev`/`yarn cf:preview` this can stay a
+      // placeholder - Wrangler emulates KV entirely on local disk under
+      // .wrangler/ and never calls the real Cloudflare API for it. Only
+      // needs a real ID if you run `yarn cf:preview --remote` against your
+      // actual account.
+      "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "nextchat-db",
+      "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CHAT_FILES",
+      "bucket_name": "nextchat-chat-files"
+    }
+  ]
+}
