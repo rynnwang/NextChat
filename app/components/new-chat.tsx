@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Path, SlotID } from "../constant";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Path, ServiceProvider, SlotID } from "../constant";
 import { IconButton } from "./button";
 import { EmojiAvatar } from "./emoji";
 import styles from "./new-chat.module.scss";
@@ -7,15 +7,18 @@ import styles from "./new-chat.module.scss";
 import LeftIcon from "../icons/left.svg";
 import LightningIcon from "../icons/lightning.svg";
 import EyeIcon from "../icons/eye.svg";
+import RobotIcon from "../icons/robot.svg";
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { Mask, useMaskStore } from "../store/mask";
 import Locale from "../locales";
-import { useAppConfig, useChatStore } from "../store";
+import { ModelType, useAppConfig, useChatStore } from "../store";
 import { MaskAvatar } from "./mask";
 import { useCommand } from "../command";
-import { showConfirm } from "./ui-lib";
+import { Selector, showConfirm } from "./ui-lib";
 import { BUILTIN_MASK_STORE } from "../masks";
+import { useAllModels } from "../utils/hooks";
+import { findModelByKey, modelKey, modelProviderLabel } from "../utils/model";
 import clsx from "clsx";
 
 function MaskItem(props: { mask: Mask; onClick?: () => void }) {
@@ -88,9 +91,39 @@ export function NewChat() {
 
   const { state } = useLocation();
 
+  // let the user override which model (and which configured provider) the
+  // new session starts with, instead of always inheriting the global
+  // default or the picked mask's preset model
+  const allModels = useAllModels();
+  const availableModels = useMemo(
+    () => allModels.filter((m) => m.available),
+    [allModels],
+  );
+  const [selectedModelKey, setSelectedModelKey] = useState<string | null>(
+    null,
+  );
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const selectedModel = selectedModelKey
+    ? findModelByKey(availableModels, selectedModelKey)
+    : undefined;
+  const defaultModel =
+    availableModels.find((m) => m.isDefault) ?? availableModels[0];
+  const displayModel = selectedModel ?? defaultModel;
+
   const startChat = (mask?: Mask) => {
     setTimeout(() => {
       chatStore.newSession(mask);
+      if (selectedModel) {
+        const newSession = chatStore.currentSession();
+        chatStore.updateTargetSession(newSession, (session) => {
+          session.mask.modelConfig.model = selectedModel.name as ModelType;
+          session.mask.modelConfig.providerName = selectedModel.provider
+            ?.providerName as ServiceProvider;
+          session.mask.modelConfig.maasProviderId =
+            selectedModel.provider?.id ?? "";
+          session.mask.syncGlobalConfig = false;
+        });
+      }
       navigate(Path.Chat);
     }, 10);
   };
@@ -116,11 +149,29 @@ export function NewChat() {
   return (
     <div className={styles["new-chat"]}>
       <div className={styles["mask-header"]}>
-        <IconButton
-          icon={<LeftIcon />}
-          text={Locale.NewChat.Return}
-          onClick={() => navigate(Path.Home)}
-        ></IconButton>
+        <div className={styles["mask-header-left"]}>
+          <IconButton
+            icon={<LeftIcon />}
+            text={Locale.NewChat.Return}
+            onClick={() => navigate(Path.Home)}
+          ></IconButton>
+          {availableModels.length > 0 && (
+            <IconButton
+              icon={<RobotIcon />}
+              aria={Locale.Settings.Model}
+              text={
+                displayModel
+                  ? modelProviderLabel(displayModel)
+                    ? `${displayModel.displayName} (${modelProviderLabel(
+                        displayModel,
+                      )})`
+                    : displayModel.displayName
+                  : Locale.Settings.Model
+              }
+              onClick={() => setShowModelSelector(true)}
+            ></IconButton>
+          )}
+        </div>
         {!state?.fromHome && (
           <IconButton
             text={Locale.NewChat.NotShow}
@@ -135,6 +186,24 @@ export function NewChat() {
           ></IconButton>
         )}
       </div>
+
+      {showModelSelector && (
+        <Selector
+          defaultSelectedValue={
+            displayModel ? modelKey(displayModel) : undefined
+          }
+          items={availableModels.map((m) => ({
+            title: m.displayName,
+            subTitle: modelProviderLabel(m),
+            value: modelKey(m),
+          }))}
+          onClose={() => setShowModelSelector(false)}
+          onSelection={(s) => {
+            if (s.length === 0) return;
+            setSelectedModelKey(s[0]);
+          }}
+        />
+      )}
       <div className={styles["mask-cards"]}>
         <div className={styles["mask-card"]}>
           <EmojiAvatar avatar="1f606" size={24} />

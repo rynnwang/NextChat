@@ -5,29 +5,13 @@ import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem, Select } from "./ui-lib";
 import { useAllModels } from "../utils/hooks";
+import {
+  findModelByKey as findModel,
+  modelKey as optionValue,
+  modelProviderLabel,
+} from "../utils/model";
 import { groupBy } from "lodash-es";
 import styles from "./model-config.module.scss";
-
-type PickableModel = ReturnType<typeof useAllModels>[number];
-
-// Each option's value uniquely identifies one model: its literal API name
-// plus which configured MaaS provider row serves it (there can be more than
-// one provider offering the same protocol, so the protocol name alone isn't
-// enough to disambiguate).
-function optionValue(m: PickableModel): string {
-  return `${m.name}@@${m.provider?.id}`;
-}
-
-function findModel(
-  models: PickableModel[],
-  value: string,
-): PickableModel | undefined {
-  const sep = value.lastIndexOf("@@");
-  if (sep === -1) return undefined;
-  const name = value.slice(0, sep);
-  const providerId = value.slice(sep + 2);
-  return models.find((m) => m.name === name && m.provider?.id === providerId);
-}
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
@@ -35,10 +19,7 @@ export function ModelConfigList(props: {
 }) {
   const allModels = useAllModels();
   const availableModels = allModels.filter((v) => v.available);
-  const groupModels = groupBy(
-    availableModels,
-    (v) => v.provider?.maasProviderLabel ?? v.provider?.providerName,
-  );
+  const groupModels = groupBy(availableModels, (v) => modelProviderLabel(v));
   const value = `${props.modelConfig.model}@@${props.modelConfig?.maasProviderId}`;
   const compressModelValue = `${props.modelConfig.compressModel}@@${props.modelConfig?.compressProviderId}`;
 
@@ -284,8 +265,7 @@ export function ModelConfigList(props: {
         >
           {availableModels.map((v, i) => (
             <option value={optionValue(v)} key={i}>
-              {v.displayName}(
-              {v.provider?.maasProviderLabel ?? v.provider?.providerName})
+              {v.displayName}({modelProviderLabel(v)})
             </option>
           ))}
         </Select>
