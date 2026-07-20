@@ -4,12 +4,12 @@ import { DEFAULT_MODELS } from "../app/constant";
 describe("collectModelTable", () => {
   test("includes the built-in models keyed by name@providerId", () => {
     const table = collectModelTable(DEFAULT_MODELS, "");
-    const gpt4 = table["gpt-4@openai"];
-    expect(gpt4).toBeDefined();
-    expect(gpt4.available).toBe(true);
-    expect(gpt4.name).toBe("gpt-4");
+    const gpt4o = table["gpt-4o@openai"];
+    expect(gpt4o).toBeDefined();
+    expect(gpt4o.available).toBe(true);
+    expect(gpt4o.name).toBe("gpt-4o");
     // displayName defaults to the model name
-    expect(gpt4.displayName).toBe("gpt-4");
+    expect(gpt4o.displayName).toBe("gpt-4o");
   });
 
   test("'-all' marks every model as unavailable", () => {
@@ -18,9 +18,9 @@ describe("collectModelTable", () => {
   });
 
   test("disabling a single model leaves the others available", () => {
-    const table = collectModelTable(DEFAULT_MODELS, "-gpt-4@openai");
-    expect(table["gpt-4@openai"].available).toBe(false);
-    expect(table["gpt-3.5-turbo@openai"].available).toBe(true);
+    const table = collectModelTable(DEFAULT_MODELS, "-gpt-4o@openai");
+    expect(table["gpt-4o@openai"].available).toBe(false);
+    expect(table["gpt-4.1-mini@openai"].available).toBe(true);
   });
 
   test("adds a brand-new custom model with an explicit provider", () => {
@@ -44,8 +44,8 @@ describe("collectModels", () => {
     expect(models).toHaveLength(Object.keys(table).length);
   });
 
-  test("contains the built-in gpt-4 model", () => {
+  test("contains the built-in gpt-4o model", () => {
     const models = collectModels(DEFAULT_MODELS, "");
-    expect(models.some((m) => m.name === "gpt-4")).toBe(true);
+    expect(models.some((m) => m.name === "gpt-4o")).toBe(true);
   });
 });
