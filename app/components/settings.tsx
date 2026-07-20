@@ -7,25 +7,21 @@ import AddIcon from "../icons/add.svg";
 import CloseIcon from "../icons/close.svg";
 import CopyIcon from "../icons/copy.svg";
 import ClearIcon from "../icons/clear.svg";
-import LoadingIcon from "../icons/three-dots.svg";
 import EditIcon from "../icons/edit.svg";
-import FireIcon from "../icons/fire.svg";
 import EyeIcon from "../icons/eye.svg";
 import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
-import { trackSettingsPageGuideToCPaymentClick } from "../utils/auth-settings-events";
 import {
   Input,
   List,
   ListItem,
   Modal,
-  PasswordInput,
   Popover,
   Select,
   showConfirm,
-  showToast,
 } from "./ui-lib";
 import { ModelConfigList } from "./model-config";
+import { MaasProviderSettings } from "./maas-provider-settings";
 
 import { IconButton } from "./button";
 import {
@@ -43,20 +39,8 @@ import Locale, {
   changeLang,
   getLang,
 } from "../locales";
-import { copyToClipboard, clientUpdate, semverCompare } from "../utils";
-import Link from "next/link";
-import {
-  Anthropic,
-  Google,
-  GoogleSafetySettingsThreshold,
-  OPENAI_BASE_URL,
-  Path,
-  RELEASE_URL,
-  ServiceProvider,
-  SlotID,
-  UPDATE_URL,
-  SAAS_CHAT_URL,
-} from "../constant";
+import { copyToClipboard } from "../utils";
+import { OPENAI_BASE_URL, Path, SlotID } from "../constant";
 import { Prompt, SearchService, usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
 import { InputRange } from "./input-range";
@@ -268,9 +252,6 @@ function SyncItems() {
   const chatStore = useChatStore();
   const promptStore = usePromptStore();
   const maskStore = useMaskStore();
-  const couldSync = useMemo(() => {
-    return syncStore.cloudSync();
-  }, [syncStore]);
 
   const stateOverview = useMemo(() => {
     const sessions = chatStore.sessions;
@@ -287,32 +268,16 @@ function SyncItems() {
   return (
     <>
       <List>
-        <ListItem
-          title={Locale.Settings.Sync.CloudState}
-          subTitle={
-            syncStore.lastSyncTime
-              ? new Date(syncStore.lastSyncTime).toLocaleString()
-              : Locale.Settings.Sync.NotSyncYet
-          }
-        >
-          <>
-            {couldSync && (
-              <IconButton
-                icon={<ResetIcon />}
-                text={Locale.UI.Sync}
-                onClick={async () => {
-                  try {
-                    await syncStore.sync();
-                    showToast(Locale.Settings.Sync.Success);
-                  } catch (e) {
-                    showToast(Locale.Settings.Sync.Fail);
-                    console.error("[Sync]", e);
-                  }
-                }}
-              />
-            )}
-          </>
-        </ListItem>
+        {syncStore.cloudSync() && (
+          <ListItem
+            title={Locale.Settings.Sync.CloudState}
+            subTitle={
+              syncStore.lastSyncTime
+                ? new Date(syncStore.lastSyncTime).toLocaleString()
+                : Locale.Settings.Sync.NotSyncYet
+            }
+          />
+        )}
 
         <ListItem
           title={Locale.Settings.Sync.LocalState}
@@ -349,21 +314,6 @@ export function Settings() {
   const updateConfig = config.update;
 
   const updateStore = useUpdateStore();
-  const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const currentVersion = updateStore.formatVersion(updateStore.version);
-  const remoteId = updateStore.formatVersion(updateStore.remoteVersion);
-  const hasNewVersion = semverCompare(currentVersion, remoteId) === -1;
-  const updateUrl = getClientConfig()?.isApp ? RELEASE_URL : UPDATE_URL;
-
-  function checkUpdate(force = false) {
-    setCheckingUpdate(true);
-    updateStore.getLatestVersion(force).then(() => {
-      setCheckingUpdate(false);
-    });
-
-    console.log("[Update] local version ", updateStore.version);
-    console.log("[Update] remote version ", updateStore.remoteVersion);
-  }
 
   const accessStore = useAccessStore();
   const shouldHideBalanceQuery = useMemo(() => {
@@ -388,12 +338,6 @@ export function Settings() {
     });
   }
 
-  const enabledAccessControl = useMemo(
-    () => accessStore.enabledAccessControl(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
   const promptStore = usePromptStore();
   const builtinCount = SearchService.count.builtin;
   const customCount = promptStore.getUserPrompts().length ?? 0;
@@ -402,7 +346,6 @@ export function Settings() {
   const showUsage = accessStore.isAuthorized();
   useEffect(() => {
     // checks per minutes
-    checkUpdate();
     showUsage && checkUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -427,244 +370,6 @@ export function Settings() {
   }, []);
 
   const clientConfig = useMemo(() => getClientConfig(), []);
-  const showAccessCode = enabledAccessControl && !clientConfig?.isApp;
-
-  const accessCodeComponent = showAccessCode && (
-    <ListItem
-      title={Locale.Settings.Access.AccessCode.Title}
-      subTitle={Locale.Settings.Access.AccessCode.SubTitle}
-    >
-      <PasswordInput
-        value={accessStore.accessCode}
-        type="text"
-        placeholder={Locale.Settings.Access.AccessCode.Placeholder}
-        onChange={(e) => {
-          accessStore.update(
-            (access) => (access.accessCode = e.currentTarget.value),
-          );
-        }}
-      />
-    </ListItem>
-  );
-
-  const saasStartComponent = (
-    <ListItem
-      className={styles["subtitle-button"]}
-      title={
-        Locale.Settings.Access.SaasStart.Title +
-        `${Locale.Settings.Access.SaasStart.Label}`
-      }
-      subTitle={Locale.Settings.Access.SaasStart.SubTitle}
-    >
-      <IconButton
-        aria={
-          Locale.Settings.Access.SaasStart.Title +
-          Locale.Settings.Access.SaasStart.ChatNow
-        }
-        icon={<FireIcon />}
-        type={"primary"}
-        text={Locale.Settings.Access.SaasStart.ChatNow}
-        onClick={() => {
-          trackSettingsPageGuideToCPaymentClick();
-          window.location.href = SAAS_CHAT_URL;
-        }}
-      />
-    </ListItem>
-  );
-
-  const useCustomConfigComponent = // Conditionally render the following ListItem based on clientConfig.isApp
-    !clientConfig?.isApp && ( // only show if isApp is false
-      <ListItem
-        title={Locale.Settings.Access.CustomEndpoint.Title}
-        subTitle={Locale.Settings.Access.CustomEndpoint.SubTitle}
-      >
-        <input
-          aria-label={Locale.Settings.Access.CustomEndpoint.Title}
-          type="checkbox"
-          checked={accessStore.useCustomConfig}
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.useCustomConfig = e.currentTarget.checked),
-            )
-          }
-        ></input>
-      </ListItem>
-    );
-
-  const openAIConfigComponent = accessStore.provider ===
-    ServiceProvider.OpenAI && (
-    <>
-      <ListItem
-        title={Locale.Settings.Access.OpenAI.Endpoint.Title}
-        subTitle={Locale.Settings.Access.OpenAI.Endpoint.SubTitle}
-      >
-        <input
-          aria-label={Locale.Settings.Access.OpenAI.Endpoint.Title}
-          type="text"
-          value={accessStore.openaiUrl}
-          placeholder={OPENAI_BASE_URL}
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.openaiUrl = e.currentTarget.value),
-            )
-          }
-        ></input>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.OpenAI.ApiKey.Title}
-        subTitle={Locale.Settings.Access.OpenAI.ApiKey.SubTitle}
-      >
-        <PasswordInput
-          aria={Locale.Settings.ShowPassword}
-          aria-label={Locale.Settings.Access.OpenAI.ApiKey.Title}
-          value={accessStore.openaiApiKey}
-          type="text"
-          placeholder={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-          onChange={(e) => {
-            accessStore.update(
-              (access) => (access.openaiApiKey = e.currentTarget.value),
-            );
-          }}
-        />
-      </ListItem>
-    </>
-  );
-
-  const googleConfigComponent = accessStore.provider ===
-    ServiceProvider.Google && (
-    <>
-      <ListItem
-        title={Locale.Settings.Access.Google.Endpoint.Title}
-        subTitle={
-          Locale.Settings.Access.Google.Endpoint.SubTitle +
-          Google.ExampleEndpoint
-        }
-      >
-        <input
-          aria-label={Locale.Settings.Access.Google.Endpoint.Title}
-          type="text"
-          value={accessStore.googleUrl}
-          placeholder={Google.ExampleEndpoint}
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.googleUrl = e.currentTarget.value),
-            )
-          }
-        ></input>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.Google.ApiKey.Title}
-        subTitle={Locale.Settings.Access.Google.ApiKey.SubTitle}
-      >
-        <PasswordInput
-          aria-label={Locale.Settings.Access.Google.ApiKey.Title}
-          value={accessStore.googleApiKey}
-          type="text"
-          placeholder={Locale.Settings.Access.Google.ApiKey.Placeholder}
-          onChange={(e) => {
-            accessStore.update(
-              (access) => (access.googleApiKey = e.currentTarget.value),
-            );
-          }}
-        />
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.Google.ApiVersion.Title}
-        subTitle={Locale.Settings.Access.Google.ApiVersion.SubTitle}
-      >
-        <input
-          aria-label={Locale.Settings.Access.Google.ApiVersion.Title}
-          type="text"
-          value={accessStore.googleApiVersion}
-          placeholder="2023-08-01-preview"
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.googleApiVersion = e.currentTarget.value),
-            )
-          }
-        ></input>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.Google.GoogleSafetySettings.Title}
-        subTitle={Locale.Settings.Access.Google.GoogleSafetySettings.SubTitle}
-      >
-        <Select
-          aria-label={Locale.Settings.Access.Google.GoogleSafetySettings.Title}
-          value={accessStore.googleSafetySettings}
-          onChange={(e) => {
-            accessStore.update(
-              (access) =>
-                (access.googleSafetySettings = e.target
-                  .value as GoogleSafetySettingsThreshold),
-            );
-          }}
-        >
-          {Object.entries(GoogleSafetySettingsThreshold).map(([k, v]) => (
-            <option value={v} key={k}>
-              {k}
-            </option>
-          ))}
-        </Select>
-      </ListItem>
-    </>
-  );
-
-  const anthropicConfigComponent = accessStore.provider ===
-    ServiceProvider.Anthropic && (
-    <>
-      <ListItem
-        title={Locale.Settings.Access.Anthropic.Endpoint.Title}
-        subTitle={
-          Locale.Settings.Access.Anthropic.Endpoint.SubTitle +
-          Anthropic.ExampleEndpoint
-        }
-      >
-        <input
-          aria-label={Locale.Settings.Access.Anthropic.Endpoint.Title}
-          type="text"
-          value={accessStore.anthropicUrl}
-          placeholder={Anthropic.ExampleEndpoint}
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.anthropicUrl = e.currentTarget.value),
-            )
-          }
-        ></input>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.Anthropic.ApiKey.Title}
-        subTitle={Locale.Settings.Access.Anthropic.ApiKey.SubTitle}
-      >
-        <PasswordInput
-          aria-label={Locale.Settings.Access.Anthropic.ApiKey.Title}
-          value={accessStore.anthropicApiKey}
-          type="text"
-          placeholder={Locale.Settings.Access.Anthropic.ApiKey.Placeholder}
-          onChange={(e) => {
-            accessStore.update(
-              (access) => (access.anthropicApiKey = e.currentTarget.value),
-            );
-          }}
-        />
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.Access.Anthropic.ApiVerion.Title}
-        subTitle={Locale.Settings.Access.Anthropic.ApiVerion.SubTitle}
-      >
-        <input
-          aria-label={Locale.Settings.Access.Anthropic.ApiVerion.Title}
-          type="text"
-          value={accessStore.anthropicApiVersion}
-          placeholder={Anthropic.Vision}
-          onChange={(e) =>
-            accessStore.update(
-              (access) => (access.anthropicApiVersion = e.currentTarget.value),
-            )
-          }
-        ></input>
-      </ListItem>
-    </>
-  );
 
   return (
     <ErrorBoundary>
@@ -716,39 +421,6 @@ export function Settings() {
                 <Avatar avatar={config.avatar} />
               </div>
             </Popover>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.Update.Version(currentVersion ?? "unknown")}
-            subTitle={
-              checkingUpdate
-                ? Locale.Settings.Update.IsChecking
-                : hasNewVersion
-                ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
-                : Locale.Settings.Update.IsLatest
-            }
-          >
-            {checkingUpdate ? (
-              <LoadingIcon />
-            ) : hasNewVersion ? (
-              clientConfig?.isApp ? (
-                <IconButton
-                  icon={<ResetIcon></ResetIcon>}
-                  text={Locale.Settings.Update.GoToUpdate}
-                  onClick={() => clientUpdate()}
-                />
-              ) : (
-                <Link href={updateUrl} target="_blank" className="link">
-                  {Locale.Settings.Update.GoToUpdate}
-                </Link>
-              )
-            ) : (
-              <IconButton
-                icon={<ResetIcon></ResetIcon>}
-                text={Locale.Settings.Update.CheckUpdate}
-                onClick={() => checkUpdate(true)}
-              />
-            )}
           </ListItem>
 
           <ListItem title={Locale.Settings.SendKey}>
@@ -982,47 +654,9 @@ export function Settings() {
           </ListItem>
         </List>
 
+        <MaasProviderSettings />
+
         <List id={SlotID.CustomModel}>
-          {saasStartComponent}
-          {accessCodeComponent}
-
-          {!accessStore.hideUserApiKey && (
-            <>
-              {useCustomConfigComponent}
-
-              {accessStore.useCustomConfig && (
-                <>
-                  <ListItem
-                    title={Locale.Settings.Access.Provider.Title}
-                    subTitle={Locale.Settings.Access.Provider.SubTitle}
-                  >
-                    <Select
-                      aria-label={Locale.Settings.Access.Provider.Title}
-                      value={accessStore.provider}
-                      onChange={(e) => {
-                        accessStore.update(
-                          (access) =>
-                            (access.provider = e.target
-                              .value as ServiceProvider),
-                        );
-                      }}
-                    >
-                      {Object.entries(ServiceProvider).map(([k, v]) => (
-                        <option value={v} key={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </Select>
-                  </ListItem>
-
-                  {openAIConfigComponent}
-                  {googleConfigComponent}
-                  {anthropicConfigComponent}
-                </>
-              )}
-            </>
-          )}
-
           {!shouldHideBalanceQuery && !clientConfig?.isApp ? (
             <ListItem
               title={Locale.Settings.Usage.Title}

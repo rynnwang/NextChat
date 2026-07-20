@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { getClientConfig } from "../config/client";
 import { StoreKey } from "../constant";
 import { createPersistStore } from "../utils/store";
@@ -12,6 +13,7 @@ import { downloadAs, readFromFile } from "../utils";
 import { showToast } from "../components/ui-lib";
 import Locale from "../locales";
 import { createSyncClient, ProviderType } from "../utils/cloud";
+import { useChatStore } from "./chat";
 
 const isApp = !!getClientConfig()?.isApp;
 export type SyncStore = GetStoreState<typeof useSyncStore>;
@@ -110,3 +112,39 @@ export const useSyncStore = createPersistStore(
     },
   },
 );
+
+const AUTO_SYNC_DEBOUNCE_MS = 3000;
+
+// Chat-history backup to D1/R2 happens automatically now - pulls and merges
+// any remote state once on load, then pushes again a few seconds after the
+// chat store settles (debounced, so a fast-arriving stream of tokens during
+// an in-progress reply doesn't push mid-message).
+export function useAutoSync() {
+  useEffect(() => {
+    const syncStore = useSyncStore.getState();
+    if (!syncStore.cloudSync()) return;
+
+    syncStore.sync().catch((e) => {
+      console.error("[Sync] initial pull failed", e);
+    });
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = useChatStore.subscribe(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        useSyncStore
+          .getState()
+          .sync()
+          .catch((e) => {
+            console.error("[Sync] auto push failed", e);
+          });
+      }, AUTO_SYNC_DEBOUNCE_MS);
+    });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}

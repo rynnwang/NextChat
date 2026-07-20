@@ -29,6 +29,7 @@ import { SiteAuthGate } from "./site-auth-gate";
 import { getClientConfig } from "../config/client";
 import { fetchMaasModels } from "../utils/model";
 import { useAccessStore } from "../store";
+import { useAutoSync } from "../store/sync";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
 
@@ -226,6 +227,7 @@ export function useLoadData() {
 export function Home() {
   useSwitchTheme();
   useLoadData();
+  useAutoSync();
   useHtmlLang();
 
   useEffect(() => {
