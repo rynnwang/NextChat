@@ -8,7 +8,7 @@ import styles from "./home.module.scss";
 import BotIcon from "../icons/bot.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 
-import { getCSSVar, useMobileScreen } from "../utils";
+import { getCSSVar } from "../utils";
 
 import dynamic from "next/dynamic";
 import { ModelProvider, Path, SlotID } from "../constant";
@@ -155,15 +155,10 @@ export function WindowContent(props: { children: React.ReactNode }) {
 }
 
 function Screen() {
-  const config = useAppConfig();
   const location = useLocation();
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
-
-  const isMobileScreen = useMobileScreen();
-  const shouldTightBorder =
-    getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
 
   useEffect(() => {
     loadAsyncGoogleFont();
@@ -204,7 +199,6 @@ function Screen() {
   return (
     <div
       className={clsx(styles.container, {
-        [styles["tight-container"]]: shouldTightBorder,
         [styles["rtl-screen"]]: getLang() === "ar",
       })}
     >
