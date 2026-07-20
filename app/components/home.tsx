@@ -8,10 +8,10 @@ import styles from "./home.module.scss";
 import BotIcon from "../icons/bot.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 
-import { getCSSVar, useMobileScreen } from "../utils";
+import { getCSSVar } from "../utils";
 
 import dynamic from "next/dynamic";
-import { Path, SlotID } from "../constant";
+import { ModelProvider, Path, SlotID } from "../constant";
 import { ErrorBoundary } from "./error";
 
 import { getISOLang, getLang } from "../locales";
@@ -27,7 +27,7 @@ import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { SiteAuthGate } from "./site-auth-gate";
 import { getClientConfig } from "../config/client";
-import { type ClientApi, getClientApi } from "../client/api";
+import { ClientApi } from "../client/api";
 import { useAccessStore } from "../store";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
@@ -155,15 +155,10 @@ export function WindowContent(props: { children: React.ReactNode }) {
 }
 
 function Screen() {
-  const config = useAppConfig();
   const location = useLocation();
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
-
-  const isMobileScreen = useMobileScreen();
-  const shouldTightBorder =
-    getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
 
   useEffect(() => {
     loadAsyncGoogleFont();
@@ -204,7 +199,6 @@ function Screen() {
   return (
     <div
       className={clsx(styles.container, {
-        [styles["tight-container"]]: shouldTightBorder,
         [styles["rtl-screen"]]: getLang() === "ar",
       })}
     >
@@ -213,14 +207,29 @@ function Screen() {
   );
 }
 
+// Every kept provider is one endpoint on the same MaaS account (see
+// docs/cloudflare-workers-en.md), so refresh all three model lists on load -
+// not just whichever provider the current session happens to be using -
+// so the model picker always reflects everything the gateway serves.
+const ALL_MODEL_PROVIDERS = [
+  ModelProvider.GPT,
+  ModelProvider.GeminiPro,
+  ModelProvider.Claude,
+];
+
 export function useLoadData() {
   const config = useAppConfig();
 
-  const api: ClientApi = getClientApi(config.modelConfig.providerName);
-
   useEffect(() => {
     (async () => {
-      const models = await api.llm.models();
+      const results = await Promise.allSettled(
+        ALL_MODEL_PROVIDERS.map((provider) =>
+          new ClientApi(provider).llm.models(),
+        ),
+      );
+      const models = results.flatMap((r) =>
+        r.status === "fulfilled" ? r.value : [],
+      );
       config.mergeModels(models);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

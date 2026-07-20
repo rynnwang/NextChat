@@ -17,7 +17,11 @@ upstream API, so a long streamed response barely uses any of your daily CPU-time
 This repo already contains everything needed to build a Worker:
 
 - [`wrangler.jsonc`](../wrangler.jsonc) — the Worker's name, compatibility date/flags, and its
-  static assets binding.
+  static assets binding. Deliberately does **not** declare the KV/D1/R2 bindings below — see why
+  in step 2.
+- [`wrangler.dev.jsonc`](../wrangler.dev.jsonc) — a local-dev-only copy that *does* declare those
+  bindings, so `yarn cf:preview`/`yarn dev`/the `cf:d1:migrate:*` scripts can still emulate/target
+  them. Not used by Cloudflare's deploy at all.
 - [`open-next.config.ts`](../open-next.config.ts) — OpenNext's Cloudflare build configuration.
 - `yarn cf:build` / `yarn cf:preview` / `yarn cf:deploy` — package.json scripts that wrap the
   OpenNext + Wrangler CLIs, for local builds/testing if you ever want them.
@@ -27,7 +31,7 @@ password (stored, PBKDF2-hashed, in a Cloudflare KV namespace), and every visit 
 requires logging in with it via a signed session cookie. Chat-history backup/sync (Settings →
 "Sync") is backed by this same deployment's own Cloudflare D1 (sync metadata) and R2 (the actual
 backup blob) — there's nothing to configure client-side, but you do need to create all three
-resources (KV, D1, R2) before your first deploy — see step 2 below.
+resources (KV, D1, R2) and bind them to the Worker before your first deploy — see step 2 below.
 
 This guide covers the **first deployment by hand from the Cloudflare dashboard**, so everything
 below is portal clicks, not CLI commands — Cloudflare will run the build/deploy commands for you
@@ -53,32 +57,40 @@ on every push once it's connected to your fork.
 
 1. Log in at [dash.cloudflare.com](https://dash.cloudflare.com).
 2. Create the three storage resources this fork needs, before your first deploy — all under
-   **Storage & Databases** in the left sidebar. Use these exact names (don't improvise your own —
-   D1's name and R2's name are hardcoded in `wrangler.jsonc`, and using anything else just adds a
-   step for no benefit):
+   **Storage & Databases** in the left sidebar. Use these exact names (D1's name is hardcoded in
+   the migration tooling; the others don't strictly have to match, but there's no reason to
+   improvise):
 
-   | Resource | Product/action | Create it named exactly | Binding name (fixed, don't change) | Do you need to edit `wrangler.jsonc`? |
-   | --- | --- | --- | --- | --- |
-   | Site login | KV → **Create namespace** | `nextchat-auth` | `AUTH_KV` | **Yes** — paste the Namespace ID it gives you over `REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID` |
-   | Chat-history sync metadata | D1 SQL Database → **Create database** | `nextchat-db` | `CHAT_DB` | **Yes** — paste the Database ID it gives you over `REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID` |
-   | Chat-history sync blob | R2 Object Storage → **Create bucket** | `nextchat-chat-files` | `CHAT_FILES` | **No** — this exact name is already set in `wrangler.jsonc` |
+   | Resource | Product/action | Create it named exactly | Binding name (fixed, don't change) |
+   | --- | --- | --- | --- |
+   | Site login | KV → **Create namespace** | `nextchat-auth` | `AUTH_KV` |
+   | Chat-history sync metadata | D1 SQL Database → **Create database** | `nextchat-db` | `CHAT_DB` |
+   | Chat-history sync blob | R2 Object Storage → **Create bucket** | `nextchat-chat-files` | `CHAT_FILES` |
 
-   KV and D1 hand you an opaque ID after creation that has to go into `wrangler.jsonc` — there's no
-   way around that, the config file has no plain "name" field for either, only that ID. R2 is
-   different: a bucket's name *is* its identifier, so as long as you create it with the name above,
-   there's nothing left to edit for it.
+   > **Why bindings go in the dashboard here, not in `wrangler.jsonc`.** The deployed
+   > `wrangler.jsonc` deliberately does not declare any of these three bindings. This repo's Worker
+   > auto-redeploys via `wrangler deploy` on every push, and Wrangler treats that file as
+   > authoritative for a Worker's bindings — if it declared them (even correctly), every deploy
+   > would re-apply whatever's committed, discarding anything you'd changed by hand afterward. This
+   > is the opposite tradeoff from putting real IDs in the file: it keeps them out of a public repo,
+   > at the cost of a manual per-binding step below. **This is unverified**: Cloudflare's own docs
+   > don't fully confirm that omitting a binding from config (as opposed to declaring a wrong value)
+   > reliably survives every subsequent deploy. Test it yourself once you're done — rebind, push
+   > something trivial, and check Settings → Bindings afterward. If a binding ever reverts to
+   > missing after a routine push, that's this assumption not holding for your setup; the fallback
+   > that's guaranteed to work is putting the real ID into `wrangler.jsonc` directly (see the
+   > comment there for exactly which field), or making your fork private so the IDs being in git no
+   > longer matters.
 
-   For the two rows that do need an edit: after creating that resource and copying its ID, edit
-   `wrangler.jsonc` **in your fork** and replace the matching `REPLACE_WITH_...` placeholder with
-   the real ID, then commit and push before continuing — the Worker build reads bindings from this
-   file, not from anything you click in the dashboard. **This step is the one people skip and then
-   hit a deploy error for** (see the first troubleshooting entry below) — don't move on until both
-   placeholders are gone from your pushed `wrangler.jsonc`.
+   For each resource above, after creating it: open its detail page, find the **Bindings** section
+   for *this specific Worker* — for a Worker not yet created, you'll do this from the Worker's own
+   **Settings → Bindings → Add binding** once you reach step 6 below; come back to this list then.
+   Pick the matching type (KV Namespace / D1 Database / R2 Bucket), the resource you just created,
+   and type the exact binding name from the table above.
 
-   Finally, for D1 specifically: after creating `nextchat-db`, open its **Console** tab in the
-   dashboard (still no CLI needed) and run the contents of
-   [`migrations/0001_create_sync_state.sql`](../migrations/0001_create_sync_state.sql) — this
-   creates the one small table sync metadata lives in.
+   For D1 specifically, also open `nextchat-db`'s **Console** tab (still no CLI needed) and run the
+   contents of [`migrations/0001_create_sync_state.sql`](../migrations/0001_create_sync_state.sql)
+   — this creates the one small table sync metadata lives in.
 3. In the left sidebar go to **Compute (Workers)** (this is a separate top-level section from
    "Workers & Pages → Pages").
 4. Click **Create** → **Import a Git repository**.
@@ -109,12 +121,19 @@ on every push once it's connected to your fork.
    Mark API keys as **Secret**, not plain text. At minimum add your provider key, e.g.
    `OPENAI_API_KEY`.
 9. Click **Save and Deploy**. The first build takes a couple of minutes; Cloudflare streams the
-   build log on screen.
-10. Once it's live, open the `*.workers.dev` URL Cloudflare gives you. You should land on a
-    one-time setup page — choose a password there (write it down, it can't be recovered or reset
-    without manually clearing the KV namespace), then confirm you can log back in, that a chat
-    message round-trips to your model provider, and that Settings → "Sync" shows a working "Sync"
-    button (confirms the D1/R2 bindings are wired up correctly).
+   build log on screen. It should succeed even though the bindings aren't attached yet — the
+   deployed `wrangler.jsonc` doesn't declare them, so there's nothing to fail deploy-time
+   validation. Login/setup and sync will error at runtime until the next step is done.
+10. Once it's live, attach the three bindings: go to the Worker's own **Settings → Bindings** tab
+    (not the KV/D1/R2 resource's own page) → **Add binding**, and for each row from the table in
+    step 2, pick the matching resource type, select the resource you created, and type the exact
+    binding name (`AUTH_KV`, `CHAT_DB`, `CHAT_FILES`). No redeploy needed — these take effect
+    immediately.
+11. Open the `*.workers.dev` URL Cloudflare gives you. You should land on a one-time setup page —
+    choose a password there (write it down, it can't be recovered or reset without manually
+    clearing the KV namespace), then confirm you can log back in, that a chat message round-trips
+    to your model provider, and that Settings → "Sync" shows a working "Sync" button (confirms the
+    D1/R2 bindings are wired up correctly).
 
 From now on, every push to your production branch triggers a new build+deploy automatically —
 that part is no longer a manual step.
@@ -169,30 +188,31 @@ yarn cf:preview             # builds, then runs the Worker locally via Wrangler
 
 `yarn cf:preview` runs the actual Worker bundle (not `next dev`), so it's the closest thing to a
 production dry run you can get without deploying. Local KV/D1/R2 state is emulated on disk under
-`.wrangler/` and persists across runs.
+`.wrangler/` and persists across runs. All three commands above (and plain `yarn dev`) read
+[`wrangler.dev.jsonc`](../wrangler.dev.jsonc) for bindings, not the deployed `wrangler.jsonc` —
+the placeholder KV/D1 IDs already in that file are fine to leave as-is for local emulation, since
+Wrangler never calls the real Cloudflare API for local (non-`--remote`) dev/preview.
 
 ## 6. Troubleshooting
 
-- **Deploy fails with `KV namespace 'REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID' is not valid`** (or
-  the equivalent for `CHAT_DB`'s `database_id`) — this is the single most common mistake: the
-  placeholder in `wrangler.jsonc` was never replaced with a real ID, in the pushed commit that
-  actually got deployed. Check the "Bindings" list partway through the build log — it prints the
-  literal value each binding resolved to. If it still shows `REPLACE_WITH_...`, go back to step 2,
-  copy the real Namespace/Database ID from the resource's page in the dashboard, paste it over the
-  placeholder in your fork's `wrangler.jsonc`, and make sure you actually commit *and push* that
-  change (a local edit that was never pushed deploys the same as no edit at all).
-- **The setup/login page errors out, or `/api/session` returns an error instead of
-  `{configured, authenticated}`** — same root cause as above, specifically for `AUTH_KV`.
-- **Build/deploy fails with something like `r2_buckets[0].bucket_name="..." is invalid`** — you
-  changed `bucket_name` away from the default `nextchat-chat-files` to something that doesn't
-  satisfy R2's naming rules (lowercase letters/numbers/hyphens only, no underscores/uppercase,
-  3-63 characters). Either rename your bucket to exactly `nextchat-chat-files` (simplest — matches
-  the pre-set default, no edit needed) or fix `bucket_name` in `wrangler.jsonc` to match whatever
-  valid name you actually created it with.
-- **Settings → "Sync" shows an error, or `/api/sync/meta` / `/api/sync/blob` return a 500 with a
-  "binding not found" message** — same root cause as the first entry, for `CHAT_DB`/`CHAT_FILES`,
-  or you created the D1 database but never ran the migration (the `sync_state` table doesn't exist
-  yet — see step 2 above, it's one SQL statement pasted into the D1 database's **Console** tab).
+- **The setup/login page errors out, `/api/session` returns an error instead of
+  `{configured, authenticated}`, or Settings → "Sync" errors with a "binding not found" message**
+  — the Worker doesn't have `AUTH_KV`/`CHAT_DB`/`CHAT_FILES` attached under its own **Settings →
+  Bindings** tab yet (step 10), or you created the D1 database but never ran the migration (the
+  `sync_state` table doesn't exist — step 2, one SQL statement pasted into the D1 database's
+  **Console** tab).
+- **A binding that was working suddenly shows "not found" again after a routine push, with no
+  config changes on your end** — this is the risk called out in step 2: the deployed
+  `wrangler.jsonc` omits these bindings specifically so a normal `wrangler deploy` won't clobber
+  them, but this isn't confirmed to hold in every case. If it happens, re-attach the binding under
+  Settings → Bindings and treat it as evidence the assumption didn't hold for your setup — the
+  fallback that's guaranteed to survive every deploy is putting the real ID into `wrangler.jsonc`
+  directly (see the comment block there for the exact field), or making your fork private.
+- **You changed `wrangler.dev.jsonc`'s R2 `bucket_name` (for local testing) to something that
+  fails with `r2_buckets[0].bucket_name="..." is invalid`** — R2 bucket names must be lowercase
+  letters/numbers/hyphens only (no underscores/uppercase), 3-63 characters. This only affects local
+  `yarn cf:preview`/`cf:d1:migrate:*` runs, since the deployed `wrangler.jsonc` doesn't declare R2
+  at all.
 - **Deploy fails with `ERROR Could not find compiled Open Next config, did you run the build
   command?`, right after a build that otherwise looked successful** — the **Build command** is
   set to the plain `yarn run build`/`next build` instead of `yarn cf:build`. Fix it under

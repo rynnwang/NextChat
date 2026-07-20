@@ -20,11 +20,11 @@
     "test": "node --no-warnings --experimental-vm-modules $(yarn bin jest) --watch",
     "test:ci": "node --no-warnings --experimental-vm-modules $(yarn bin jest) --ci",
     "cf:build": "yarn mask && opennextjs-cloudflare build",
-    "cf:preview": "yarn cf:build && opennextjs-cloudflare preview",
+    "cf:preview": "yarn cf:build && opennextjs-cloudflare preview --config wrangler.dev.jsonc",
     "cf:deploy": "yarn cf:build && opennextjs-cloudflare deploy",
-    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "cf:d1:migrate:local": "wrangler d1 migrations apply nextchat-db --local",
-    "cf:d1:migrate:remote": "wrangler d1 migrations apply nextchat-db --remote"
+    "cf:typegen": "wrangler types --config wrangler.dev.jsonc --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf:d1:migrate:local": "wrangler d1 migrations apply nextchat-db --local --config wrangler.dev.jsonc",
+    "cf:d1:migrate:remote": "wrangler d1 migrations apply nextchat-db --remote --config wrangler.dev.jsonc"
   },
   "dependencies": {
     "@fortaine/fetch-event-source": "^3.0.6",

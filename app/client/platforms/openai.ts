@@ -20,6 +20,7 @@ import {
   streamWithThink,
 } from "@/app/utils/chat";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
+import { toLLMModels } from "@/app/utils/model";
 import { ModelSize, DalleQuality, DalleStyle } from "@/app/typing";
 
 import {
@@ -76,8 +77,6 @@ export interface DalleRequestPayload {
 }
 
 export class ChatGPTApi implements LLMApi {
-  private disableListModels = true;
-
   path(path: string): string {
     const accessStore = useAccessStore.getState();
 
@@ -449,40 +448,41 @@ export class ChatGPTApi implements LLMApi {
   }
 
   async models(): Promise<LLMModel[]> {
-    if (this.disableListModels) {
-      return DEFAULT_MODELS.slice();
+    const provider = {
+      id: "openai",
+      providerName: "OpenAI",
+      providerType: "openai",
+      sorted: 1,
+    };
+    try {
+      const res = await fetch(this.path(OpenaiPath.ListModelPath), {
+        method: "GET",
+        headers: {
+          ...getHeaders(),
+        },
+      });
+      if (!res.ok) {
+        throw new Error(
+          `GET ${OpenaiPath.ListModelPath} failed: ${res.status} ${res.statusText}`,
+        );
+      }
+
+      const resJson = (await res.json()) as OpenAIListModelResponse;
+      const ids = (resJson.data ?? []).map((m) => m.id);
+      if (ids.length === 0) {
+        throw new Error("MaaS gateway returned an empty model list");
+      }
+      console.log("[Models] OpenAI-compatible endpoint reported", ids);
+      return toLLMModels(ids, provider);
+    } catch (e) {
+      console.error(
+        "[Models] failed to list models from the MaaS gateway, falling back to the built-in list",
+        e,
+      );
+      return DEFAULT_MODELS.filter(
+        (m) => m.provider?.providerType === provider.providerType,
+      );
     }
-
-    const res = await fetch(this.path(OpenaiPath.ListModelPath), {
-      method: "GET",
-      headers: {
-        ...getHeaders(),
-      },
-    });
-
-    const resJson = (await res.json()) as OpenAIListModelResponse;
-    const chatModels = resJson.data?.filter(
-      (m) => m.id.startsWith("gpt-") || m.id.startsWith("chatgpt-"),
-    );
-    console.log("[Models]", chatModels);
-
-    if (!chatModels) {
-      return [];
-    }
-
-    //由于目前 OpenAI 的 disableListModels 默认为 true，所以当前实际不会运行到这场
-    let seq = 1000; //同 Constant.ts 中的排序保持一致
-    return chatModels.map((m) => ({
-      name: m.id,
-      available: true,
-      sorted: seq++,
-      provider: {
-        id: "openai",
-        providerName: "OpenAI",
-        providerType: "openai",
-        sorted: 1,
-      },
-    }));
   }
 }
 export { OpenaiPath };

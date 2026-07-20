@@ -20,10 +20,15 @@
   //          Database ID below (same reason as KV).
   //   R2  -> create a bucket named exactly "nextchat-chat-files" - nothing
   //          to paste here, the bucket_name below already matches it.
+  //
+  // Confirmed by testing: omitting bindings here and relying on dashboard-set
+  // ones did NOT survive redeploys - Wrangler still requires real values
+  // declared here. So these must stay accurate; if you rebind through the
+  // dashboard, update the IDs below to match rather than removing them.
   "kv_namespaces": [
     {
       "binding": "AUTH_KV",
-      "id": "nextchat-auth"
+      "id": "8e00f1ec4a4445c2a4eda3ff28d788ad"
     }
   ],
   "d1_databases": [
