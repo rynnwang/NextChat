@@ -23,14 +23,14 @@
   "kv_namespaces": [
     {
       "binding": "AUTH_KV",
-      "id": "REPLACE_WITH_YOUR_AUTH_KV_NAMESPACE_ID"
+      "id": "nextchat-auth"
     }
   ],
   "d1_databases": [
     {
       "binding": "CHAT_DB",
       "database_name": "nextchat-db",
-      "database_id": "REPLACE_WITH_YOUR_CHAT_DB_DATABASE_ID",
+      "database_id": "db701253-445d-4708-a7a8-c4910b60eeed",
       "migrations_dir": "migrations"
     }
   ],
