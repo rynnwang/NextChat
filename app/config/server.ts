@@ -1,6 +1,5 @@
 import md5 from "spark-md5";
-import { DEFAULT_MODELS, DEFAULT_GA_ID } from "../constant";
-import { isGPT4Model } from "../utils/model";
+import { DEFAULT_GA_ID } from "../constant";
 
 declare global {
   namespace NodeJS {
@@ -18,10 +17,8 @@ declare global {
       BUILD_APP?: string; // is building desktop app
 
       HIDE_USER_API_KEY?: string; // disable user's api key input
-      DISABLE_GPT4?: string; // allow user to use gpt-4 or not
       ENABLE_BALANCE_QUERY?: string; // allow user to query balance or not
       DISABLE_FAST_LINK?: string; // disallow parse settings from url or not
-      CUSTOM_MODELS?: string; // to control custom models
       DEFAULT_MODEL?: string; // to control default model in every new chat window
       VISION_MODELS?: string; // to control vision models
 
@@ -81,20 +78,8 @@ export const getServerSideConfig = () => {
     );
   }
 
-  const disableGPT4 = !!process.env.DISABLE_GPT4;
-  let customModels = process.env.CUSTOM_MODELS ?? "";
-  let defaultModel = process.env.DEFAULT_MODEL ?? "";
-  let visionModels = process.env.VISION_MODELS ?? "";
-
-  if (disableGPT4) {
-    if (customModels) customModels += ",";
-    customModels += DEFAULT_MODELS.filter((m) => isGPT4Model(m.name))
-      .map((m) => "-" + m.name)
-      .join(",");
-    if (defaultModel && isGPT4Model(defaultModel)) {
-      defaultModel = "";
-    }
-  }
+  const defaultModel = process.env.DEFAULT_MODEL ?? "";
+  const visionModels = process.env.VISION_MODELS ?? "";
 
   const isGoogle = !!process.env.GOOGLE_API_KEY;
   const isAnthropic = !!process.env.ANTHROPIC_API_KEY;
@@ -129,10 +114,8 @@ export const getServerSideConfig = () => {
     isVercel: !!process.env.VERCEL,
 
     hideUserApiKey: !!process.env.HIDE_USER_API_KEY,
-    disableGPT4,
     hideBalanceQuery: !process.env.ENABLE_BALANCE_QUERY,
     disableFastLink: !!process.env.DISABLE_FAST_LINK,
-    customModels,
     defaultModel,
     visionModels,
     enableMcp: process.env.ENABLE_MCP === "true",

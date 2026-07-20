@@ -59,7 +59,6 @@ export const DEFAULT_CONFIG = {
   dontShowMaskSplashScreen: false, // dont show splash screen when create chat
   hideBuiltinMasks: false, // dont add builtin masks
 
-  customModels: "",
   // Starts empty - models are entirely user-configured (see the MaaS
   // provider management UI) rather than seeded from a built-in list, so an
   // unconfigured deployment doesn't show phantom "available" models that
@@ -201,10 +200,6 @@ export const useAppConfig = createPersistStore(
         state.modelConfig.template = DEFAULT_INPUT_TEMPLATE;
         state.dontShowMaskSplashScreen = false;
         state.hideBuiltinMasks = false;
-      }
-
-      if (version < 3.5) {
-        state.customModels = "claude,claude-100k";
       }
 
       if (version < 3.6) {
