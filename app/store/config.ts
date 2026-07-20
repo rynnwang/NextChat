@@ -181,15 +181,12 @@ export const useAppConfig = createPersistStore(
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
       if (!state) return { ...currentState };
-      const models = currentState.models.slice();
-      state.models.forEach((pModel) => {
-        const idx = models.findIndex(
-          (v) => v.name === pModel.name && v.provider === pModel.provider,
-        );
-        if (idx !== -1) models[idx] = pModel;
-        else models.push(pModel);
-      });
-      return { ...currentState, ...state, models: models };
+      // Models are entirely server-authoritative now (see useLoadData/
+      // fetchMaasModels, which re-fetches /api/maas/models on every load) -
+      // never carry forward whatever list happened to be persisted from a
+      // previous session (e.g. old DEFAULT_MODELS entries from before this
+      // was a MaaS-only deployment), or they'd silently reappear forever.
+      return { ...currentState, ...state, models: currentState.models };
     },
 
     migrate(persistedState, version) {
