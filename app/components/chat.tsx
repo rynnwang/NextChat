@@ -118,7 +118,7 @@ import { createTTSPlayer } from "../utils/audio";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
 
 import { isEmpty } from "lodash-es";
-import { getModelProvider } from "../utils/model";
+import { findModelByKey, modelKey, modelProviderLabel } from "../utils/model";
 import { RealtimeChat } from "@/app/components/realtime-chat";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
@@ -526,6 +526,7 @@ export function ChatActions(props: {
   const currentModel = session.mask.modelConfig.model;
   const currentProviderName =
     session.mask.modelConfig?.providerName || ServiceProvider.OpenAI;
+  const currentMaasProviderId = session.mask.modelConfig?.maasProviderId || "";
   const allModels = useAllModels();
   const models = useMemo(() => {
     const filteredModels = allModels.filter((m) => m.available);
@@ -541,14 +542,27 @@ export function ChatActions(props: {
       return filteredModels;
     }
   }, [allModels]);
-  const currentModelName = useMemo(() => {
-    const model = models.find(
+  // Prefer matching by the configured MaaS provider row (unambiguous even
+  // when several providers share a protocol); fall back to matching by
+  // protocol alone for sessions created before maasProviderId was tracked.
+  const currentModelInfo = useMemo(() => {
+    if (currentMaasProviderId) {
+      const byId = models.find(
+        (m) =>
+          m.name === currentModel && m.provider?.id === currentMaasProviderId,
+      );
+      if (byId) return byId;
+    }
+    return models.find(
       (m) =>
-        m.name == currentModel &&
-        m?.provider?.providerName == currentProviderName,
+        m.name === currentModel &&
+        m.provider?.providerName === currentProviderName,
     );
-    return model?.displayName ?? "";
-  }, [models, currentModel, currentProviderName]);
+  }, [models, currentModel, currentMaasProviderId, currentProviderName]);
+  const currentModelName = currentModelInfo?.displayName ?? currentModel;
+  const currentProviderLabel = currentModelInfo
+    ? modelProviderLabel(currentModelInfo)
+    : currentProviderName;
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showPluginSelector, setShowPluginSelector] = useState(false);
   const [showUploadImage, setShowUploadImage] = useState(false);
@@ -576,7 +590,7 @@ export function ChatActions(props: {
 
     // if current model is not available
     // switch to first available model
-    const isUnavailableModel = !models.some((m) => m.name === currentModel);
+    const isUnavailableModel = !currentModelInfo;
     if (isUnavailableModel && models.length > 0) {
       // show next model to default model if exist
       let nextModel = models.find((model) => model.isDefault) || models[0];
@@ -584,14 +598,11 @@ export function ChatActions(props: {
         session.mask.modelConfig.model = nextModel.name;
         session.mask.modelConfig.providerName = nextModel?.provider
           ?.providerName as ServiceProvider;
+        session.mask.modelConfig.maasProviderId = nextModel.provider?.id ?? "";
       });
-      showToast(
-        nextModel?.provider?.providerName == "ByteDance"
-          ? nextModel.displayName
-          : nextModel.name,
-      );
+      showToast(nextModel.displayName);
     }
-  }, [chatStore, currentModel, models, session]);
+  }, [chatStore, currentModel, currentModelInfo, models, session]);
 
   return (
     <div className={styles["chat-input-actions"]}>
@@ -672,41 +683,43 @@ export function ChatActions(props: {
 
         <ChatAction
           onClick={() => setShowModelSelector(true)}
-          text={currentModelName}
+          text={
+            currentProviderLabel
+              ? `${currentModelName} (${currentProviderLabel})`
+              : currentModelName
+          }
           icon={<RobotIcon />}
         />
 
         {showModelSelector && (
           <Selector
-            defaultSelectedValue={`${currentModel}@${currentProviderName}`}
+            defaultSelectedValue={
+              currentModelInfo ? modelKey(currentModelInfo) : undefined
+            }
             items={models.map((m) => ({
-              title: `${m.displayName}${
-                m?.provider?.providerName
-                  ? " (" + m?.provider?.providerName + ")"
-                  : ""
-              }`,
-              value: `${m.name}@${m?.provider?.providerName}`,
+              title: m.displayName,
+              subTitle: modelProviderLabel(m),
+              value: modelKey(m),
             }))}
             onClose={() => setShowModelSelector(false)}
             onSelection={(s) => {
               if (s.length === 0) return;
-              const [model, providerName] = getModelProvider(s[0]);
+              const selected = findModelByKey(models, s[0]);
+              if (!selected) return;
               chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.model = model as ModelType;
-                session.mask.modelConfig.providerName =
-                  providerName as ServiceProvider;
+                session.mask.modelConfig.model = selected.name as ModelType;
+                session.mask.modelConfig.providerName = selected.provider
+                  ?.providerName as ServiceProvider;
+                session.mask.modelConfig.maasProviderId =
+                  selected.provider?.id ?? "";
                 session.mask.syncGlobalConfig = false;
               });
-              if (providerName == "ByteDance") {
-                const selectedModel = models.find(
-                  (m) =>
-                    m.name == model &&
-                    m?.provider?.providerName == providerName,
-                );
-                showToast(selectedModel?.displayName ?? "");
-              } else {
-                showToast(model);
-              }
+              const label = modelProviderLabel(selected);
+              showToast(
+                label
+                  ? `${selected.displayName} (${label})`
+                  : selected.displayName,
+              );
             }}
           />
         )}

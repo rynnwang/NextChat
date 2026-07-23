@@ -137,3 +137,34 @@ export function collectModelsWithDefaultModel(
 
   return allModels;
 }
+
+type PickableModel = Pick<LLMModel, "name" | "displayName"> & {
+  provider?: LLMModel["provider"];
+};
+
+// Identifies one selectable model: its literal API name plus which
+// configured MaaS provider row serves it - there can be more than one
+// provider offering the same protocol, so the protocol name alone isn't
+// enough to disambiguate (see app/server/maas-store.ts).
+export function modelKey(m: PickableModel): string {
+  return `${m.name}@@${m.provider?.id ?? ""}`;
+}
+
+export function findModelByKey<T extends PickableModel>(
+  models: readonly T[],
+  key: string,
+): T | undefined {
+  const sep = key.lastIndexOf("@@");
+  if (sep === -1) return undefined;
+  const name = key.slice(0, sep);
+  const providerId = key.slice(sep + 2);
+  return models.find(
+    (m) => m.name === name && (m.provider?.id ?? "") === providerId,
+  );
+}
+
+// Prefer the human-readable MaaS provider label (e.g. "My OpenAI Proxy")
+// over the bare protocol name, since several providers can share a protocol.
+export function modelProviderLabel(m: PickableModel): string {
+  return m.provider?.maasProviderLabel ?? m.provider?.providerName ?? "";
+}
